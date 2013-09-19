@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as num
-import logging, os, shutil, sys, glob, copy
+import logging, os, shutil, sys, glob, copy, math
 
 from multiprocessing import Pool
 
@@ -146,7 +146,7 @@ class QSSPConfigFull(QSSPConfig):
     sources = List.T(QSSPSource.T())
     receivers = List.T(QSSPReceiver.T())
 
-    earthmodel_cake = gf.meta.CakeNDModel.T(optional=True)
+    earthmodel_1d = gf.meta.Earthmodel1D.T(optional=True)
 
     @staticmethod
     def example():
@@ -192,7 +192,7 @@ class QSSPConfigFull(QSSPConfig):
         d['n_receiver_lines'], d['receiver_lines'] = aggregate(self.receivers)
         d['n_source_lines'], d['source_lines'] = aggregate(self.sources)
         d['n_gf_lines'], d['gf_lines'] = aggregate(self.greens_functions)
-        model_str, nlines = cake_model_to_config(self.earthmodel_cake)
+        model_str, nlines = cake_model_to_config(self.earthmodel_1d)
         d['n_model_lines'] = nlines
         d['model_lines'] = model_str
 
@@ -421,7 +421,7 @@ qssp has been invoked as "%s"'''.lstrip() %
             deltat = (data[-1,0] - data[0,0])/(nsamples-1)
             for itrace in xrange(ntraces):
                 rec = self.config.receivers[itrace]
-                tmin = rec.tstart - 2*deltat
+                tmin = rec.tstart
                 tr = trace.Trace( '', '%04i' % itrace, '', comp,
                         tmin=tmin, deltat=deltat, ydata=data[:,itrace+1],
                         meta=dict(distance=rec.distance))
@@ -434,7 +434,7 @@ qssp has been invoked as "%s"'''.lstrip() %
         if not self.keep_tmp:
             shutil.rmtree(self.tempdir)
 
-class QSSPGFBuilder(gf.builder.GFBuilder):
+class QSSPGFBuilder(gf.builder.Builder):
     def __init__(self, store_dir, step, shared, block_size=None, tmp=None ):
         self.gfmapping = [
             (MomentTensor( m=symmat6(1,0,0,1,0,0) ), {'un': (0, -1), 'ue': (3, -1), 'uz': (5, -1) }),
@@ -447,29 +447,30 @@ class QSSPGFBuilder(gf.builder.GFBuilder):
         self.store = gf.store.Store(store_dir, 'w')
 
         if self.step == 0:
-            block_size = (1,1,self.store.meta.ndistances)
+            block_size = (1,1,self.store.config.ndistances)
         else:
             if block_size is None:
                 block_size = (1,1,51)
 
-        if len(self.store.meta.ns) == 2:
+        if len(self.store.config.ns) == 2:
             block_size = block_size[1:]
 
-        gf.builder.GFBuilder.__init__(self, self.store.meta, block_size=block_size)
+        gf.builder.Builder.__init__(self, self.store.config, block_size=block_size)
 
         baseconf = self.store.get_extra('qssp')
 
         conf = QSSPConfigFull(**baseconf.items())
         conf.gf_directory = pjoin(store_dir, 'qssp_green')
-        conf.earthmodel_cake = self.store.meta.earthmodel_cake
-
+        conf.earthmodel_1d = self.store.config.earthmodel_1d
 
         if 'time_window' not in shared:
             d = self.store.make_timing_params(conf.time_region[0], conf.time_region[1])
-            print d
             shared['time_window'] = d['tmax']
+            shared['tstart'] = d['tmin']
 
-        conf.time_window = shared['time_window']
+        deltat = self.store.config.deltat
+        conf.tstart_hack = math.floor(min(shared['tstart'], 0.0) / deltat) * deltat
+        conf.time_window = shared['time_window'] - conf.tstart_hack
 
         self.tmp = tmp
         if self.tmp is not None:
@@ -480,11 +481,11 @@ class QSSPGFBuilder(gf.builder.GFBuilder):
         self.qssp_config = conf
         
     def work_block(self, index):
-        if len(self.store.meta.ns) == 2:
+        if len(self.store.config.ns) == 2:
             (sz, firstx), (sz, lastx), (ns, nx) = \
                     self.get_block_extents(index)
 
-            rz = self.store.meta.receiver_depth
+            rz = self.store.config.receiver_depth
         else:
             (rz, sz, firstx), (rz, sz, lastx), (nr, ns, nx) = \
                     self.get_block_extents(index)
@@ -506,7 +507,7 @@ class QSSPGFBuilder(gf.builder.GFBuilder):
         runner = QSSPRunner(tmp=self.tmp)
         
         conf.receiver_depth = rz/km
-        conf.sampling_interval = 1.0/self.gf_set.sample_rate
+        conf.sampling_interval = deltat = 1.0/self.gf_set.sample_rate
 
         dx = self.gf_set.distance_delta
 
@@ -517,7 +518,7 @@ class QSSPGFBuilder(gf.builder.GFBuilder):
                     firstx + (nx-1)*dx, nx)
 
         conf.receivers = [ 
-                QSSPReceiver( lat=90-d*cake.m2d, lon=180., tstart=0., distance=d) for 
+                QSSPReceiver( lat=90-d*cake.m2d, lon=180., tstart=0.0, distance=d) for 
                     d in distances ]
 
         gfs = [ QSSPGreen( filename=gf_filename,
@@ -525,11 +526,11 @@ class QSSPGFBuilder(gf.builder.GFBuilder):
 
         conf.greens_functions = gfs
 
-        trise = 0.01*conf.sampling_interval # make it short like a delta impulse
+        trise = 0.001*conf.sampling_interval # make it short like a delta impulse
 
         if self.step == 0:
             conf.sources = [ QSSPSourceMT(lat=90-0.001*dx*cake.m2d, lon=0.0, 
-                trise=trise) ]
+                trise=trise, torigin=-conf.tstart_hack ) ]
 
             runner.run(conf)
 
@@ -540,7 +541,7 @@ class QSSPGFBuilder(gf.builder.GFBuilder):
                 conf.sources = [ QSSPSourceMT(lat=90-0.001*dx*cake.m2d, lon=0.0, 
                     mrr = m[0,0], mtt = m[1,1], mpp = m[2,2],
                     mrt = m[0,1], mrp = m[0,2], mtp = m[1,2],
-                    trise=trise) ]
+                    trise=trise, torigin=-conf.tstart_hack) ]
 
                 runner.run(conf)
        
@@ -550,10 +551,12 @@ class QSSPGFBuilder(gf.builder.GFBuilder):
 
                 for itr, tr in enumerate(rawtraces):
                     if tr.channel in gfmap:
+                        tr.shift(conf.tstart_hack)
+
                         x = tr.meta['distance']
                         ig, factor = gfmap[tr.channel]
 
-                        if len(self.store.meta.ns) == 2:
+                        if len(self.store.config.ns) == 2:
                             args = (sz,x,ig)
                         else:
                             args = (rz,sz,x,ig)
@@ -565,9 +568,9 @@ class QSSPGFBuilder(gf.builder.GFBuilder):
                                 continue
 
                             tr.chop(tmin, tmax)
-
-                        gf_tr = gf.store.GFTrace(tr.get_ydata() * factor,
-                                int(round((tr.tmin) / tr.deltat)), tr.deltat)
+                        
+                        gf_tr = gf.store.GFTrace.from_trace(tr)
+                        gf_tr.data *= factor
 
                         self.store.put(args, gf_tr)
 
@@ -582,11 +585,14 @@ km = 1000.
 def init(store_dir):
     qssp = QSSPConfig()
     qssp.time_region = (
-            Timing('begin-100'),
-            Timing('end+100'))
+            gf.meta.Timing('begin-50'),
+            gf.meta.Timing('end+100'))
 
+    qssp.cut = (
+            gf.meta.Timing('begin-50'),
+            gf.meta.Timing('end+100'))
     
-    meta = gf.meta.GFSetTypeA(
+    config = gf.meta.ConfigTypeA(
             id = 'my_qssp_gf_store',
             ncomponents = 10,
             sample_rate = 0.2,
@@ -597,31 +603,31 @@ def init(store_dir):
             distance_min = 100*km,
             distance_max = 1000*km,
             distance_delta = 10*km,
-            earthmodel_cake = cake.load_model(),
+            earthmodel_1d = cake.load_model(),
             modelling_code_id = 'qssp',
-            phase_tab_defs = [
-                    gf.meta.PhaseTabDef(
+            tabulated_phases = [
+                    gf.meta.TPDef(
                         id = 'begin',
                         definition = 'p,P,p\\,P\\,Pv_(cmb)p'),
-                    gf.meta.PhaseTabDef(
+                    gf.meta.TPDef(
                         id = 'end',
                         definition = '2.5'),
-                    gf.meta.PhaseTabDef(
+                    gf.meta.TPDef(
                         id = 'P',
                         definition = '!P'),
-                    gf.meta.PhaseTabDef(
+                    gf.meta.TPDef(
                         id = 'S',
                         definition = '!S'),
-                    gf.meta.PhaseTabDef(
+                    gf.meta.TPDef(
                         id = 'p',
                         definition = '!p'),
-                    gf.meta.PhaseTabDef(
+                    gf.meta.TPDef(
                         id = 's',
                         definition = '!s')
             ])
 
-    meta.validate()
-    return gf.store.Store.create_editables(store_dir, meta=meta, extra={'qssp': qssp})
+    config.validate()
+    return gf.store.Store.create_editables(store_dir, config=config, extra={'qssp': qssp})
 
 def __work_block(args):
     store_dir, step, iblock, shared = args
