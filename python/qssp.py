@@ -419,9 +419,10 @@ qssp has been invoked as "%s"'''.lstrip() %
             nsamples, ntraces = data.shape
             ntraces -= 1
             deltat = (data[-1,0] - data[0,0])/(nsamples-1)
+            toffset = data[0,0]
             for itrace in xrange(ntraces):
                 rec = self.config.receivers[itrace]
-                tmin = rec.tstart
+                tmin = rec.tstart + toffset
                 tr = trace.Trace( '', '%04i' % itrace, '', comp,
                         tmin=tmin, deltat=deltat, ydata=data[:,itrace+1],
                         meta=dict(distance=rec.distance))
@@ -469,8 +470,7 @@ class QSSPGFBuilder(gf.builder.Builder):
             shared['tstart'] = d['tmin']
 
         deltat = self.store.config.deltat
-        conf.tstart_hack = math.floor(min(shared['tstart'], 0.0) / deltat) * deltat
-        conf.time_window = shared['time_window'] - conf.tstart_hack
+        conf.time_window = shared['time_window']
 
         self.tmp = tmp
         if self.tmp is not None:
@@ -530,7 +530,7 @@ class QSSPGFBuilder(gf.builder.Builder):
 
         if self.step == 0:
             conf.sources = [ QSSPSourceMT(lat=90-0.001*dx*cake.m2d, lon=0.0, 
-                trise=trise, torigin=-conf.tstart_hack ) ]
+                trise=trise, torigin=0.0) ]
 
             runner.run(conf)
 
@@ -541,7 +541,7 @@ class QSSPGFBuilder(gf.builder.Builder):
                 conf.sources = [ QSSPSourceMT(lat=90-0.001*dx*cake.m2d, lon=0.0, 
                     mrr = m[0,0], mtt = m[1,1], mpp = m[2,2],
                     mrt = m[0,1], mrp = m[0,2], mtp = m[1,2],
-                    trise=trise, torigin=-conf.tstart_hack) ]
+                    trise=trise, torigin=0.0) ]
 
                 runner.run(conf)
        
@@ -551,7 +551,6 @@ class QSSPGFBuilder(gf.builder.Builder):
 
                 for itr, tr in enumerate(rawtraces):
                     if tr.channel in gfmap:
-                        tr.shift(conf.tstart_hack)
 
                         x = tr.meta['distance']
                         ig, factor = gfmap[tr.channel]
