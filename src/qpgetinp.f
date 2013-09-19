@@ -10,20 +10,19 @@ c
       double precision twindow,twinout,suppress,munit,sdfsel
       double precision strike,dip,rake,depdif,dswap(11)
       character*80 grndir,outfile,fswap
-      character*180 comments
 c
 c     uniform receiver depth
 c     ======================
 c
-      call getdata(unit,comments)
-      read(comments,*)dpr
+      call skip_comments(unit)
+      read(unit,*)dpr
       dpr=KM2M*dpr
 c
 c     time (frequency) sampling
 c     =========================
 c
-      call getdata(unit,comments)
-      read(comments,*)twindow,dt
+      call skip_comments(unit)
+      read(unit,*)twindow,dt
       ntcut=1+idnint(twindow/dt)
       nt=2
 100   nt=2*nt
@@ -34,20 +33,20 @@ c
       endif
       df=1.d0/(dble(nt)*dt)
 c
-      call getdata(unit,comments)
-      read(comments,*)fcut
+      call skip_comments(unit)
+      read(unit,*)fcut
       nfcut=min0(nf,1+idnint(fcut/df))
       fcut=dble(nfcut-1)*df
-      call getdata(unit,comments)
-      read(comments,*)slwmax
+      call skip_comments(unit)
+      read(unit,*)slwmax
       if(slwmax.le.0.d0)then
         stop ' Error: bad selection of max. slowness!'
       else
         slwmax=slwmax/KM2M
       endif
 c
-      call getdata(unit,comments)
-      read(comments,*)suppress
+      call skip_comments(unit)
+      read(unit,*)suppress
       if(suppress.le.0.d0.or.suppress.ge.1.d0)then
         fi=0.d0
       else
@@ -57,8 +56,8 @@ c
 c     cutoffs of spectra
 c     ==================
 c
-      call getdata(unit,comments)
-      read(comments,*)fgr,ldeggr
+      call skip_comments(unit)
+      read(unit,*)fgr,ldeggr
       if(fgr.lt.0.d0)fgr=0.d0
       if(ldeggr.lt.0)ldeggr=0
       if(fgr.gt.0.d0.and.ldeggr.le.0.or.
@@ -67,22 +66,20 @@ c
       endif
       nogravity=fgr*dble(ldeggr).le.0.d0
 c
-      call getdata(unit,comments)
-      read(comments,*)i,j
+      call skip_comments(unit)
+      read(unit,*)i,j, ldegmin
       selpsv=i.eq.1
       selsh=j.eq.1
       if(.not.(selpsv.or.selsh))then
         stop ' Error: none of PSV and SH is selected!'
       endif
-      ldegmin=1+ndmax
-      read(comments,*,end=110)i,j,ldegmin
-110   ldegmin=min0(max0(1+ndmax,ldegmin),ldegmax)
+      ldegmin=min0(max0(1+ndmax,ldegmin),ldegmax)
 c
 c     Green's function files
 c     ======================
 c
-      call getdata(unit,comments)
-      read(comments,*)ngrn,rr0,grndir
+      call skip_comments(unit)
+      read(unit,*)ngrn,rr0,grndir
       if(ngrn.le.0)then
         stop ' bad number of source depths!'
       else if(ngrn.gt.ngrnmax)then
@@ -91,8 +88,8 @@ c
       rr0=rr0*KM2M
 c
       do ig=1,ngrn
-        call getdata(unit,comments)
-        read(comments,*)grndep(ig),grnfile(ig),grnsel(ig)
+        call skip_comments(unit)
+        read(unit,*)grndep(ig),grnfile(ig),grnsel(ig)
         if(grnsel(ig).lt.0.or.grnsel(ig).gt.1)then
           stop ' bad Green function selection!'
         endif
@@ -136,20 +133,21 @@ c
 c     multi-event source parameters
 c     =============================
 c
-      call getdata(unit,comments)
-      read(comments,*)ns,sdfsel
+      call skip_comments(unit)
+      read(unit,*)ns,sdfsel
       if(ns.gt.nsmax)then
         stop ' Error: too many subevents'
       endif
       if(sdfsel.eq.1)then
         do is=1,ns
-          call getdata(unit,comments)
+          call skip_comments(unit)
 c
 c         the six moment-tensor elements: Mrr, Mtt, Mpp, Mrt, Mrp, Mtp
 c
-          read(comments,*)munit,mrr(is),mtt(is),mpp(is),
+          read(unit,*)munit,mrr(is),mtt(is),mpp(is),
      &                          mrt(is),mpr(is),mtp(is),
      &                    lats(is),lons(is),deps(is),togs(is),trss(is)
+
           mtt(is)=mtt(is)*munit
           mpp(is)=mpp(is)*munit
           mrr(is)=mrr(is)*munit
@@ -160,8 +158,8 @@ c
         enddo
       else if(sdfsel.eq.2)then
         do is=1,ns
-          call getdata(unit,comments)
-          read(comments,*)munit,strike,dip,rake,
+          call skip_comments(unit)
+          read(unit,*)munit,strike,dip,rake,
      &                    lats(is),lons(is),deps(is),togs(is),trss(is)
           call moments(munit,strike,dip,rake,
      &                 mtt(is),mpp(is),mrr(is),
@@ -246,18 +244,18 @@ c
 c     receiver parameters
 c     ===================
 c
-      call getdata(unit,comments)
-      read(comments,*)outfile,ioutform
+      call skip_comments(unit)
+      read(unit,*)outfile,ioutform
       if(ioutform.lt.1.or.ioutform.gt.2)then
         stop ' Error: bad selection of output format!'
       endif
-      call getdata(unit,comments)
-      read(comments,*)twinout
+      call skip_comments(unit)
+      read(unit,*)twinout
       ntcutout=min0(nt,1+idnint(twinout/dt))
-      call getdata(unit,comments)
-      read(comments,*)nlpf,fcorner
-      call getdata(unit,comments)
-      read(comments,*)slwlwcut,slwupcut
+      call skip_comments(unit)
+      read(unit,*)nlpf,fcorner
+      call skip_comments(unit)
+      read(unit,*)slwlwcut,slwupcut
       if(slwupcut.le.0.d0.or.slwlwcut.ge.slwupcut)then
         slwlwcut=0.d0
         slwupcut=slwmax
@@ -265,8 +263,8 @@ c
         slwlwcut=slwlwcut/KM2M
         slwupcut=slwupcut/KM2M
       endif
-      call getdata(unit,comments)
-      read(comments,*)nr
+      call skip_comments(unit)
+      read(unit,*)nr
       if(nr.gt.nrmax)then
         stop ' Error: too many receivers'
       endif
@@ -290,8 +288,8 @@ c
       endif
 c
       do ir=1,nr
-        call getdata(unit,comments)
-        read(comments,*)latr(ir),lonr(ir),rname(ir),tred(ir)
+        call skip_comments(unit)
+        read(unit,*)latr(ir),lonr(ir),rname(ir),tred(ir)
       enddo
 c
       do flen=80,1,-1
@@ -335,8 +333,8 @@ c
 c     multilayered model parameters
 c     =============================
 c
-      call getdata(unit,comments)
-      read(comments,*)l,i
+      call skip_comments(unit)
+      read(unit,*)l,i
       if(l.ge.lymax-2)then
         stop ' Error: lymax defined too small!'
       endif
@@ -350,8 +348,8 @@ c
       depatmos=0.d0
       rratmos=REARTH
       do i=1,l
-        call getdata(unit,comments)
-        read(comments,*)j,dp0(i),vp0(i),vs0(i),ro0(i),qp0(i),qs0(i)
+        call skip_comments(unit)
+        read(unit,*)j,dp0(i),vp0(i),vs0(i),ro0(i),qp0(i),qs0(i)
 c
 c       input units:    -,km,  km/s, km/s, g/cm^3,-,-
 c
