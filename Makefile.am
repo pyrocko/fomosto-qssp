@@ -1,3 +1,3 @@
-SUBDIRS = src python
+SUBDIRS = src
 EXTRA_DIST = doc
 
