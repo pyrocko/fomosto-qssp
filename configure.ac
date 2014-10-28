@@ -1,4 +1,4 @@
-AC_INIT([qssp], [1.2])
+AC_INIT([qssp], [1.3])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_PROG_F77
 AC_CONFIG_FILES([

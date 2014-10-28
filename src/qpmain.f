@@ -7,7 +7,7 @@ c     work space
 c
       integer ig,ierr,runtime
       integer time
-      character*80 inputfile
+      character*800 inputfile
 c
 c     read input file file
 c

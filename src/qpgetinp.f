@@ -9,7 +9,7 @@ c
       integer i,j,l,ir,ig,isg,is,is1,flen,iswap,nhypo
       double precision twindow,twinout,suppress,munit,sdfsel
       double precision strike,dip,rake,depdif,dswap(11)
-      character*80 grndir,outfile,fswap
+      character*800 grndir,outfile,fswap
 c
 c     uniform receiver depth
 c     ======================
@@ -116,7 +116,7 @@ c
         enddo
       enddo
 c
-      do flen=80,1,-1
+      do flen=800,1,-1
         if(grndir(flen:flen).ne.' ')goto 200
       enddo
 200   continue
@@ -292,7 +292,7 @@ c
         read(unit,*)latr(ir),lonr(ir),rname(ir),tred(ir)
       enddo
 c
-      do flen=80,1,-1
+      do flen=800,1,-1
         if(outfile(flen:flen).ne.' ')goto 300
       enddo
 300   continue
