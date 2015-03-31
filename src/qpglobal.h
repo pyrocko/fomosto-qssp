@@ -64,7 +64,7 @@ c
       complex yp(0:ldegmax,4,0:ndmax),ys(0:ldegmax,4,0:ndmax)
       complex yg(0:ldegmax,4,0:ndmax),yv(0:ldegmax,4,0:ndmax)
       complex yw(0:ldegmax,4,0:ndmax)
-      character*80 grnfile(ngrnmax),
+      character*800 grnfile(ngrnmax),
      &             rgrnfile(ngrnmax),tgrnfile(ngrnmax),
      &             pgrnfile(ngrnmax),sgrnfile(ngrnmax),
      &             ggrnfile(ngrnmax),vgrnfile(ngrnmax),
@@ -105,7 +105,7 @@ c
       double complex ug(nfmax,nrmax),uv(nfmax,nrmax)
       double complex uw(nfmax,nrmax)
       character*10 rname(nrmax)
-      character*80 uxout,uyout,uzout,
+      character*800 uxout,uyout,uzout,
      &             vxout,vyout,vzout,
      &             axout,ayout,azout,
      &             sdout,grout,tvout,
