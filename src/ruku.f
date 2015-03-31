@@ -5,8 +5,8 @@
       double complex y(i0,j0)
       external difmat
 c
-      integer nrrmax
-      parameter(nrrmax=4096)
+      integer nrrmax,nrrmin,nrrmid
+      parameter(nrrmax=16384,nrrmin=2,nrrmid=512)
 c
       integer i,j,k,irr,nrr
       double precision rr,drr
@@ -79,8 +79,8 @@ c
         enddo
       enddo
 c
-      again=.false.
-      if(nrr.le.64)then
+      if(nrr.le.nrrmid)then
+        again=nrr.lt.nrrmin
         do j=1,j0
           do i=1,i0
             yb(i,j)=y2(i,j)
@@ -88,6 +88,7 @@ c
           enddo
         enddo
       else if(nrr.le.nrrmax)then
+        again=.false.
         do j=1,j0
           do i=1,i0
             ra=c2*y1(i,j)-y0(i,j)-y2(i,j)

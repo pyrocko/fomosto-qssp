@@ -9,4 +9,4 @@ Makefile
 config.log
 config.status
 *.o
-src/qssp
+src/fomosto_qssp2010

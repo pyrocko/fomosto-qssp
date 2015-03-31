@@ -19,15 +19,6 @@ c===============================================================================
 c
 c     propagation from surface to source
 c
-      if(lys.lt.lyob)then
-        do istp=1,2
-          do i=1,2
-            ysh(i,istp)=(0.d0,0.d0)
-          enddo
-        enddo
-        return
-      endif
-c
       yup(1)=(1.d0,0.d0)
       yup(2)=(0.d0,0.d0)
 c

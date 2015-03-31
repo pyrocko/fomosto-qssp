@@ -41,12 +41,12 @@ c
      &                -dble(2*ldeg+1)*dxs*plm(ldeg-1,0)
      &                +dble(ldeg+1)*plm(ldeg-2,0))
         enddo
-        open(19,file='disk.dat',status='unknown')
-        write(19,'(a)')'     n        fdisk'
-        do ldeg=0,ldegmax
-          write(19,'(i6,E16.8)')ldeg,fdisk(ldeg)
-        enddo
-        close(19)
+c        open(19,file='disk.dat',status='unknown')
+c        write(19,'(a)')'     n        fdisk'
+c        do ldeg=0,ldegmax
+c          write(19,'(i6,E16.8)')ldeg,fdisk(ldeg)
+c        enddo
+c        close(19)
         do ldeg=0,ldegmax
           disk(ldeg)=fdisk(ldeg)*dble(2*ldeg+1)/(4.d0*PI*rrup(lys)**2)
         enddo
@@ -103,7 +103,7 @@ c
 c
       omi=PI2*fcut
       ldegup=ldeg0
-      do ldegup=ldeg0,min0(ldegmax,ldeg0+idint(REARTH*omi*slwmax))
+      do ldegup=ldeg0,min0(ldegcut+ndmax,ldeg0+idint(REARTH*omi*slwmax))
         dll1=dble(ldegup)*dble(ldegup+1)
         expo=0.d0
         do ly=min0(lys,lyr),max0(lys,lyr)-1
@@ -130,7 +130,7 @@ c
       write(*,*)' '
       write(*,'(a,i3,a,f7.2,a)')' ... calculate Green functions for ',
      &        ig,'. source at depth ',(grndep(ig)-depatmos)/KM2M,' km'
-	write(*,'(a,i5)')'   max. harmonic degree: L_max = ',ldegup
+	  write(*,'(a,i5)')'   max. harmonic degree: L_max = ',ldegup
 c
       write(21)nt,ntcut,dt,nf,nfcut,df,ldegup
       write(22)nt,ntcut,dt,nf,nfcut,df,ldegup
@@ -184,7 +184,7 @@ c         of sh solution
 c
           lylwsh(ldeg)=min0(lycm,ly0)
           expo=0.d0
-          do ly=max0(lys,lyr,lyob),min0(lycm,ly0)-1
+          do ly=max0(lys,lyr,lyob)+1,min0(lycm,ly0)-1
             ksp2=(omi*rrup(ly)/vsup(ly))**2
             if(dll1.gt.ksp2)then
               expo=expo+dsqrt(dll1-ksp2)*dlog(rrup(ly)/rrlw(ly))
@@ -201,7 +201,7 @@ c         of psv solution
 c
           lylwpsv(ldeg)=ly0
           expo=0.d0
-          do ly=max0(lys,lyr,lyob),min0(lycm,ly0)-1
+          do ly=max0(lys,lyr,lyob)+1,min0(lycm,ly0)-1
             ksp2=(omi*rrup(ly)/vsup(ly))**2
             if(dll1.gt.ksp2)then
               expo=expo+dsqrt(dll1-ksp2)*dlog(rrup(ly)/rrlw(ly))
@@ -234,18 +234,6 @@ c
 200       continue
 c
           lyupatm(ldeg)=1
-          expo=0.d0
-          do ly=lyob-1,1,-1
-            ksp2=(omi*rrup(ly)/vpup(ly))**2
-            if(dll1.gt.ksp2)then
-              expo=expo+dsqrt(dll1-ksp2)*dlog(rrup(ly)/rrlw(ly))
-            endif
-            if(expo.gt.expoa)then
-              lyupatm(ldeg)=ly
-              goto 300
-            endif
-          enddo
-300       continue
         enddo
 c
         if(selpsv.or.lys.lt.lyob)then
@@ -307,6 +295,9 @@ c
         enddo
 c
         do ldeg=0,ldegf+1
+c
+          ly=lyupatm(ldeg)
+c
           do istp=1,4
             ys1(istp,0)=ys1(istp,1)
             ys2(istp,0)=ys2(istp,1)
@@ -327,9 +318,9 @@ c
             yt2(istp,1)=yt2(istp,2)
           enddo
 c
-          if(.not.selpsv.or.lys.lt.lyob.and.f.le.0.d0)then
+          if(.not.selpsv.or.ldeg.gt.ldegcut)then
             do istp=1,4
-	        do i=1,6
+              do i=1,6
                 ypsv(i,istp)=(0.d0,0.d0)
               enddo
             enddo
@@ -354,9 +345,9 @@ c
             endif
           endif
 c
-          if(.not.selsh.or.lys.lt.lyob)then
+          if(.not.selsh.or.ldeg.gt.ldegcut.or.lys.lt.lyob)then
             do istp=1,2
-	        do i=1,2
+              do i=1,2
                 ysh(i,istp)=(0.d0,0.d0)
               enddo
             enddo
@@ -369,8 +360,9 @@ c
               yspr(istp)=-ypsv(2,istp)
             enddo
           else
-            ca=(claup(lyr)+cmuup(lyr)*c2/c3)/(claup(lyr)+cmuup(lyr)*c2)
-            cb=cmuup(lyr)/dcmplx(rrup(lyr),0.d0)
+            ca=(clalw(lyr-1)+cmulw(lyr-1)*c2/c3)
+     &        /(clalw(lyr-1)+cmulw(lyr-1)*c2)
+            cb=cmulw(lyr-1)/dcmplx(rrlw(lyr-1),0.d0)
             cll1=dcmplx(dble(ldeg)*dble(ldeg+1),0.d0)
             do istp=1,4
               yspr(istp)=-ca*(ypsv(2,istp)+c4*cb*ypsv(1,istp)
@@ -381,6 +373,7 @@ c
           comi2=dcmplx(PI2*f,PI2*fi)**2
           ca=dcmplx(dble(ldeg+1)/rrup(lyr),0.d0)
           cb=dcmplx(freeairgrd,0.d0)-comi2
+          if(lyr.gt.1)cb=cb-cgalw(lyr-1)
           do istp=1,4
             ysgr(istp)=-ypsv(6,istp)+ca*ypsv(5,istp)+cb*ypsv(1,istp)
           enddo
@@ -396,11 +389,11 @@ c
 c
 c         1. Explosion (M11=M22=M33=1)
 c
-          cs1=dcmplx( disk(ldeg)/(roup(lys)*vpup(lys)**2),0.d0)
-          cs2=dcmplx(-disk(ldeg)*4.d0*(vsup(lys)/vpup(lys))**2
-     &                /rrup(lys),0.d0)
-          cs4=dcmplx( disk(ldeg)*2.d0*(vsup(lys)/vpup(lys))**2
-     &                /rrup(lys),0.d0)
+          cs1=dcmplx( disk(ldeg)/roup(lys),0.d0)/cvpup(lys)**2
+          cs2=dcmplx(-disk(ldeg)*4.d0/rrup(lys),0.d0)
+     &       *(cvsup(lys)/cvpup(lys))**2
+          cs4=dcmplx( disk(ldeg)*2.d0/rrup(lys),0.d0)
+     &       *(cvsup(lys)/cvpup(lys))**2
           ys1(1,2)=cs1*ypsv(1,1)+cs2*ypsv(1,2)+cs4*ypsv(1,4)
           ys2(1,2)=cs1*ypsv(3,1)+cs2*ypsv(3,2)+cs4*ypsv(3,4)
           ys3(1,2)=cs1*yspr(1)+cs2*yspr(2)+cs4*yspr(4)
@@ -444,7 +437,7 @@ c
             yt2(3,2)=(0.d0,0.d0)
           else
             ct1=dcmplx(disk(ldeg)/(dble(ldeg)*dble(ldeg+1)
-     &                *roup(lys)*vsup(lys)**2),0.d0)
+     &          *roup(lys)),0.d0)/cvsup(lys)**2
             cs3=ct1
             ys1(3,2)=cs3*ypsv(1,3)
             ys2(3,2)=cs3*ypsv(3,3)
@@ -464,9 +457,9 @@ c
             ys4(4,2)=(0.d0,0.d0)
             ys5(4,2)=(0.d0,0.d0)
           else
-            cs1=dcmplx( disk(ldeg)/(roup(lys)*vpup(lys)**2),0.d0)
-            cs2=dcmplx( disk(ldeg)*(3.d0-4.d0*(vsup(lys)/vpup(lys))**2)
-     &                  /rrup(lys),0.d0)
+            cs1=dcmplx( disk(ldeg)/roup(lys),0.d0)/cvpup(lys)**2
+            cs2=dcmplx( disk(ldeg)/rrup(lys),0.d0)
+     &         *((3.d0,0.d0)-(4.d0,0.d0)*(cvsup(lys)/cvpup(lys))**2)
             cs4=-(0.5d0,0.d0)*cs2
             ys1(4,2)=cs1*ypsv(1,1)+cs2*ypsv(1,2)+cs4*ypsv(1,4)
             ys2(4,2)=cs1*ypsv(3,1)+cs2*ypsv(3,2)+cs4*ypsv(3,4)

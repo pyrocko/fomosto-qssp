@@ -9,7 +9,7 @@ c
 c
       integer i,j,key
       double complex cldeg,cxi,c2mu,cllm1,cllp1,c2lp1,c2lm1,c2lp3
-      double complex psi,eta,cxp2,cxs2
+      double complex cs2dp2,cxp2,cxs2
       double complex dphjup,dphjlw,dphyup,dphylw
       double complex ph0jup(2),ph1jup(2),ph0yup(2),ph1yup(2)
       double complex ph0jlw(2),ph1jlw(2),ph0ylw(2),ph1ylw(2)
@@ -17,8 +17,9 @@ c
       double complex spb(2,4),mas(6,6)
       double complex spbphj,spbphy,spbpsj,spbpsy,spbdphj,spbdphy
 c
-      double complex ci,c1,c2,c3
-      data ci,c1,c2,c3/(0.d0,1.d0),(1.d0,0.d0),(2.d0,0.d0),(3.d0,0.d0)/
+      double complex ci,c1,c2,c3,c4
+      data ci,c1,c2,c3,c4/(0.d0,1.d0),(1.d0,0.d0),(2.d0,0.d0),
+     &                    (3.d0,0.d0),(4.d0,0.d0)/
 c
       cldeg=dcmplx(dble(ldeg),0.d0)
       c2mu=c2*cmu(ly)
@@ -41,6 +42,7 @@ c
         ph1jup(2)=spbphj(ldeg+1,ks(ly)*crrup(ly))
         ps0jup(2)=spbpsj(ldeg,ks(ly)*crrup(ly))
         dphjup=spbdphj(ldeg,kp(ly)*crrup(ly),ks(ly)*crrup(ly))
+     &            *(c1-(cvs(ly)/cvp(ly))**2)
 c
         ph0yup(1)=spbphy(ldeg,kp(ly)*crrup(ly))
         ph1yup(1)=spbphy(ldeg-1,kp(ly)*crrup(ly))
@@ -49,6 +51,7 @@ c
         ph1yup(2)=spbphy(ldeg-1,ks(ly)*crrup(ly))
         ps0yup(2)=spbpsy(ldeg,ks(ly)*crrup(ly))
         dphyup=spbdphy(ldeg,kp(ly)*crrup(ly),ks(ly)*crrup(ly))
+     &        *(c1-(cvs(ly)/cvp(ly))**2)
 c
         mas6x6up(1,1,ly)=cldeg*ph0jup(1)-cxp2*ph1jup(1)/c2lp3
         mas6x6up(2,1,ly)=(-cxi*cxp2+c2mu*cllm1)*ph0jup(1)
@@ -59,39 +62,38 @@ c
         mas6x6up(5,1,ly)=cga(ly)*ph0jup(1)
         mas6x6up(6,1,ly)=cga(ly)*(cldeg+c1)*ph0jup(1)
 c
-        mas6x6up(1,2,ly)=(cldeg+c1)*ph0yup(1)
-     &                   -cxp2*ph1yup(1)/c2lm1
-        mas6x6up(2,2,ly)=(cxi*cxp2-c2mu*(cldeg+c1)*(cldeg+c2))
+        mas6x6up(1,2,ly)=-(cldeg+c1)*ph0yup(1)
+     &                   +cxp2*ph1yup(1)/c2lm1
+        mas6x6up(2,2,ly)=(-cxi*cxp2+c2mu*(cldeg+c1)*(cldeg+c2))
      &                  *ph0yup(1)-c2*c2mu*cxp2*ph1yup(1)/c2lm1
-        mas6x6up(3,2,ly)=-ph0yup(1)
-        mas6x6up(4,2,ly)=c2mu*((cldeg+c2)*ph0yup(1)
-     &                         -cxp2*ph1yup(1)/c2lm1)
-        mas6x6up(5,2,ly)=-cga(ly)*ph0yup(1)
-        mas6x6up(6,2,ly)=-cga(ly)*(cldeg+c1)*ph0yup(1)
+        mas6x6up(3,2,ly)=ph0yup(1)
+        mas6x6up(4,2,ly)=c2mu*(-(cldeg+c2)*ph0yup(1)
+     &                         +cxp2*ph1yup(1)/c2lm1)
+        mas6x6up(5,2,ly)=cga(ly)*ph0yup(1)
+        mas6x6up(6,2,ly)=cga(ly)*(cldeg+c1)*ph0yup(1)
 c
-        psi=cvs(ly)**2/(cvs(ly)**2-cvp(ly)**2)
-        eta=cvp(ly)**2/(cvs(ly)**2-cvp(ly)**2)
+        cs2dp2=(cvs(ly)/cvp(ly))**2
 c
-        mas6x6up(1,3,ly)=cldeg*dphjup-psi*ph1jup(1)/c2lp3
-        mas6x6up(2,3,ly)=c2mu*cllm1*dphjup-cxi*psi*ph0jup(1)
-     &       +c2mu*(c2*psi*ph1jup(1)+cldeg*eta*ph1jup(2))/c2lp3
-        mas6x6up(3,3,ly)=dphjup+eta*ph1jup(2)/((cldeg+c1)*c2lp3)
+        mas6x6up(1,3,ly)=cldeg*dphjup-c2*cs2dp2*ph1jup(1)
+        mas6x6up(2,3,ly)=c2mu*(cllm1*dphjup-c2lp3*ph0jup(1)
+     &                    +c4*cs2dp2*ph1jup(1)+c2*cldeg*ph1jup(2))
+        mas6x6up(3,3,ly)=dphjup+c2*ph1jup(2)/(cldeg+c1)
         mas6x6up(4,3,ly)=c2mu*((cldeg-c1)*dphjup
-     &                           +eta*ph0jup(2)/(c2*(cldeg+c1))
-     &                -(psi*ph1jup(1)+eta*ph1jup(2)/(cldeg+c1))/c2lp3)
-        mas6x6up(5,3,ly)=-cga(ly)*psi*ps0jup(1)/(c2*c2lp3)
-        mas6x6up(6,3,ly)=cga(ly)*(-(cldeg+c1)*psi*ps0jup(1)
-     &                            -cldeg*eta*ps0jup(2))/(c2*c2lp3)
+     &                        +c2lp3*ph0jup(2)/(cldeg+c1)
+     &                -c2*(cs2dp2*ph1jup(1)+ph1jup(2)/(cldeg+c1)))
+        mas6x6up(5,3,ly)=-cga(ly)*cs2dp2*ps0jup(1)
+        mas6x6up(6,3,ly)=cga(ly)*((cldeg+c1)*dphjup
+     &                            -ps0jup(2)*c2lp1)
 c
-        mas6x6up(1,4,ly)=(cldeg+c1)*dphyup-psi*ph1yup(1)/c2lm1
-        mas6x6up(2,4,ly)=cxi*psi*ph0yup(1)
-     &        -c2mu*((cldeg+c1)*(cldeg+c2)*dphyup
-     &        -(c2*psi*ph1yup(1)-(cldeg+c1)*eta*ph1yup(2))/c2lm1)
-        mas6x6up(3,4,ly)=-dphyup-eta*ph1yup(2)/(cldeg*c2lm1)
+        mas6x6up(1,4,ly)=(cldeg+c1)*dphyup+c2*cs2dp2*ph1yup(1)
+        mas6x6up(2,4,ly)=c2mu*(-(cldeg+c1)*(cldeg+c2)*dphyup
+     &                 -c2lm1*ph0yup(1)-c4*cs2dp2*ph1yup(1)
+     &                 +c2*(cldeg+c1)*ph1yup(2))
+        mas6x6up(3,4,ly)=-dphyup+c2*ph1yup(2)/cldeg
         mas6x6up(4,4,ly)=c2mu*((cldeg+c2)*dphyup
-     &                         +eta*ph0yup(2)/(c2*cldeg)
-     &                  -(psi*ph1yup(1)-eta*ph1yup(2)/cldeg)/c2lm1)
-        mas6x6up(5,4,ly)=-cga(ly)*psi*ps0yup(1)/(c2*c2lm1)
+     &                  -c2lm1*ph0yup(2)/cldeg
+     &                  +c2*(cs2dp2*ph1yup(1)-ph1yup(2)/cldeg))
+        mas6x6up(5,4,ly)=cga(ly)*cs2dp2*ps0yup(1)
         mas6x6up(6,4,ly)=-cga(ly)*(cldeg+c1)*dphyup
       else
         spb(1,1)=c1-zjup(ldeg,ly,1)
@@ -128,9 +130,9 @@ c
           mas6x6up(i,j,ly)=(0.d0,0.d0)
         enddo
       enddo
-      mas6x6up(5,5,ly)=c1
+      mas6x6up(5,5,ly)=(1.d0,0.d0)
       mas6x6up(6,5,ly)=c2lp1
-      mas6x6up(5,6,ly)=c1
+      mas6x6up(5,6,ly)=(1.d0,0.d0)
       mas6x6up(6,6,ly)=(0.d0,0.d0)
 c
       if(ly.eq.lylw)return
@@ -147,6 +149,7 @@ c
         ph1jlw(2)=spbphj(ldeg+1,ks(ly)*crrlw(ly))
         ps0jlw(2)=spbpsj(ldeg,ks(ly)*crrlw(ly))
         dphjlw=spbdphj(ldeg,kp(ly)*crrlw(ly),ks(ly)*crrlw(ly))
+     &            *(c1-(cvs(ly)/cvp(ly))**2)
 c
         ph0ylw(1)=spbphy(ldeg,kp(ly)*crrlw(ly))
         ph1ylw(1)=spbphy(ldeg-1,kp(ly)*crrlw(ly))
@@ -155,6 +158,7 @@ c
         ph1ylw(2)=spbphy(ldeg-1,ks(ly)*crrlw(ly))
         ps0ylw(2)=spbpsy(ldeg,ks(ly)*crrlw(ly))
         dphylw=spbdphy(ldeg,kp(ly)*crrlw(ly),ks(ly)*crrlw(ly))
+     &        *(c1-(cvs(ly)/cvp(ly))**2)
 c
         mas6x6lw(1,1,ly)=cldeg*ph0jlw(1)-cxp2*ph1jlw(1)/c2lp3
         mas6x6lw(2,1,ly)=(-cxi*cxp2+c2mu*cllm1)*ph0jlw(1)
@@ -165,39 +169,38 @@ c
         mas6x6lw(5,1,ly)=cga(ly)*ph0jlw(1)
         mas6x6lw(6,1,ly)=cga(ly)*(cldeg+c1)*ph0jlw(1)
 c
-        mas6x6lw(1,2,ly)=(cldeg+c1)*ph0ylw(1)
-     &                   -cxp2*ph1ylw(1)/c2lm1
-        mas6x6lw(2,2,ly)=(cxi*cxp2-c2mu*(cldeg+c1)*(cldeg+c2))
+        mas6x6lw(1,2,ly)=-(cldeg+c1)*ph0ylw(1)
+     &                   +cxp2*ph1ylw(1)/c2lm1
+        mas6x6lw(2,2,ly)=(-cxi*cxp2+c2mu*(cldeg+c1)*(cldeg+c2))
      &                  *ph0ylw(1)-c2*c2mu*cxp2*ph1ylw(1)/c2lm1
-        mas6x6lw(3,2,ly)=-ph0ylw(1)
-        mas6x6lw(4,2,ly)=c2mu*((cldeg+c2)*ph0ylw(1)
-     &                         -cxp2*ph1ylw(1)/c2lm1)
-        mas6x6lw(5,2,ly)=-cga(ly)*ph0ylw(1)
-        mas6x6lw(6,2,ly)=-cga(ly)*(cldeg+c1)*ph0ylw(1)
+        mas6x6lw(3,2,ly)=ph0ylw(1)
+        mas6x6lw(4,2,ly)=c2mu*(-(cldeg+c2)*ph0ylw(1)
+     &                         +cxp2*ph1ylw(1)/c2lm1)
+        mas6x6lw(5,2,ly)=cga(ly)*ph0ylw(1)
+        mas6x6lw(6,2,ly)=cga(ly)*(cldeg+c1)*ph0ylw(1)
 c
-        psi=cvs(ly)**2/(cvs(ly)**2-cvp(ly)**2)
-        eta=cvp(ly)**2/(cvs(ly)**2-cvp(ly)**2)
+        cs2dp2=(cvs(ly)/cvp(ly))**2
 c
-        mas6x6lw(1,3,ly)=cldeg*dphjlw-psi*ph1jlw(1)/c2lp3
-        mas6x6lw(2,3,ly)=c2mu*cllm1*dphjlw-cxi*psi*ph0jlw(1)
-     &       +c2mu*(c2*psi*ph1jlw(1)+cldeg*eta*ph1jlw(2))/c2lp3
-        mas6x6lw(3,3,ly)=dphjlw+eta*ph1jlw(2)/((cldeg+c1)*c2lp3)
+        mas6x6lw(1,3,ly)=cldeg*dphjlw-c2*cs2dp2*ph1jlw(1)
+        mas6x6lw(2,3,ly)=c2mu*(cllm1*dphjlw-c2lp3*ph0jlw(1)
+     &                    +c4*cs2dp2*ph1jlw(1)+c2*cldeg*ph1jlw(2))
+        mas6x6lw(3,3,ly)=dphjlw+c2*ph1jlw(2)/(cldeg+c1)
         mas6x6lw(4,3,ly)=c2mu*((cldeg-c1)*dphjlw
-     &                           +eta*ph0jlw(2)/(c2*(cldeg+c1))
-     &                -(psi*ph1jlw(1)+eta*ph1jlw(2)/(cldeg+c1))/c2lp3)
-        mas6x6lw(5,3,ly)=-cga(ly)*psi*ps0jlw(1)/(c2*c2lp3)
-        mas6x6lw(6,3,ly)=cga(ly)*(-(cldeg+c1)*psi*ps0jlw(1)
-     &                            -cldeg*eta*ps0jlw(2))/(c2*c2lp3)
+     &                        +c2lp3*ph0jlw(2)/(cldeg+c1)
+     &                -c2*(cs2dp2*ph1jlw(1)+ph1jlw(2)/(cldeg+c1)))
+        mas6x6lw(5,3,ly)=-cga(ly)*cs2dp2*ps0jlw(1)
+        mas6x6lw(6,3,ly)=cga(ly)*((cldeg+c1)*dphjlw
+     &                            -ps0jlw(2)*c2lp1)
 c
-        mas6x6lw(1,4,ly)=(cldeg+c1)*dphylw-psi*ph1ylw(1)/c2lm1
-        mas6x6lw(2,4,ly)=cxi*psi*ph0ylw(1)
-     &        -c2mu*((cldeg+c1)*(cldeg+c2)*dphylw
-     &        -(c2*psi*ph1ylw(1)-(cldeg+c1)*eta*ph1ylw(2))/c2lm1)
-        mas6x6lw(3,4,ly)=-dphylw-eta*ph1ylw(2)/(cldeg*c2lm1)
+        mas6x6lw(1,4,ly)=(cldeg+c1)*dphylw+c2*cs2dp2*ph1ylw(1)
+        mas6x6lw(2,4,ly)=c2mu*(-(cldeg+c1)*(cldeg+c2)*dphylw
+     &                 -c2lm1*ph0ylw(1)-c4*cs2dp2*ph1ylw(1)
+     &                 +c2*(cldeg+c1)*ph1ylw(2))
+        mas6x6lw(3,4,ly)=-dphylw+c2*ph1ylw(2)/cldeg
         mas6x6lw(4,4,ly)=c2mu*((cldeg+c2)*dphylw
-     &                         +eta*ph0ylw(2)/(c2*cldeg)
-     &                  -(psi*ph1ylw(1)-eta*ph1ylw(2)/cldeg)/c2lm1)
-        mas6x6lw(5,4,ly)=-cga(ly)*psi*ps0ylw(1)/(c2*c2lm1)
+     &                  -c2lm1*ph0ylw(2)/cldeg
+     &                  +c2*(cs2dp2*ph1ylw(1)-ph1ylw(2)/cldeg))
+        mas6x6lw(5,4,ly)=cga(ly)*cs2dp2*ps0ylw(1)
         mas6x6lw(6,4,ly)=-cga(ly)*(cldeg+c1)*dphylw
       else
         spb(1,1)=c1-zjlw(ldeg,ly,1)

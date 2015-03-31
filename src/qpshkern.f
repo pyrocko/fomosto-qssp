@@ -24,11 +24,17 @@ c
           ysh(i,istp)=(0.d0,0.d0)
         enddo
       enddo
-      lylw=lylwsh(ldeg)
-      if(lyr.lt.lyob.or.lylw.lt.max0(lys,lyr))return
 c
-      if(ldeg.eq.0.or.ldeg.le.1.and.f.le.0.d0)return
+      lylw=lylwsh(ldeg)
+c
+      if(ldeg.eq.0.or.lyr.lt.lyob.or.lylw.lt.max0(lys,lyr))return
+c
       comi=dcmplx(PI2*f,PI2*fi)
+      if(ldeg.eq.1.and.cdabs(comi).le.0.d0)then
+        call qptprop1st(ysh)
+        return
+      endif
+c
       comi2=comi*comi
       xmin=dsqrt(2.d0*dble(2*ldeg+1))
       cldeg=dcmplx(dble(ldeg),0.d0)
@@ -74,3 +80,4 @@ c
       endif
       return
       end
+

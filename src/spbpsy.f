@@ -18,8 +18,8 @@ c     Email: wang@gfz-potsdam.de                                                
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       double complex function spbpsy(n,x)
       implicit none
-	integer n
-	double complex x
+      integer n
+      double complex x
 c
 c     local memory
 c

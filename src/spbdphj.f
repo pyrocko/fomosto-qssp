@@ -8,7 +8,7 @@ c     n = order                                                                 
 c     x = complex argument                                                      c
 c                                                                               c
 c     Return:                                                                   c
-c     dphj(n,xa,xb)=(phj(n,xa)-phj(n,xb))/(xa^2-xb^2)                           c
+c     dphj(n,xa,xb)=-(phj(n,xa)-phj(n,xb))*2*(2*n+3)/(xa^2-xb^2)                c
 c     for |x/2|^2 << n                                                          c
 c                                                                               c
 c     First implemention: 17 June 2007                                          c
@@ -18,8 +18,8 @@ c     Email: wang@gfz-potsdam.de                                                
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       double complex function spbdphj(n,xa,xb)
       implicit none
-	integer n
-	double complex xa,xb
+      integer n
+      double complex xa,xb
 c
 c     local memory
 c
@@ -33,9 +33,9 @@ c
       cxb2=(0.5d0,0.d0)*xb*xb
 c
       i=1
-      ca=(1.d0,0.d0)/dcmplx(dble(2*n+3),0.d0)
-      gn=-ca
-      fn=-ca
+      ca=(1.d0,0.d0)
+      gn=ca
+      fn=ca
       cy=fn
 100   i=i+1
       ca=(1.d0,0.d0)/dcmplx(dble((2*(n+i)+1)*i),0.d0)
@@ -43,6 +43,6 @@ c
       fn=gn-fn*cxa2*ca
       cy=cy+fn
       if(cdabs(fn).gt.eps*cdabs(cy))goto 100
-      spbdphj=cy*(0.5d0,0.d0)
+      spbdphj=cy
       return
       end

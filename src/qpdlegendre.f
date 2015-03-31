@@ -1,6 +1,6 @@
-      subroutine qpdlegendre(ldegcut,raddis)
+      subroutine qpdlegendre(ldeg,raddis)
       implicit none
-      integer ldegcut
+      integer ldeg
       double precision raddis
 c
       include 'qpglobal.h'
@@ -17,7 +17,7 @@ c
 c
       plm(0,0)=0.d0
       plm(1,0)=y
-      do l=2,ldegcut
+      do l=2,ldeg
         plm(l,0)=(dble(2*l-1)*y+dble(2*l-1)*x*plm(l-1,0)
      &             -dble(l-1)*plm(l-2,0))/dble(l)
       enddo
@@ -25,7 +25,7 @@ c
       plm(0,1)=0.d0
       plm(1,1)=0.d0
       plm(2,1)=3.d0*y
-      do l=3,ldegcut
+      do l=3,ldeg
         plm(l,1)=0.5d0*dble(l)*dble(2*l-1)*y
      &          +(dble(2*l-1)*x*plm(l-1,1)
      &           -dble(l)*plm(l-2,1))/dble(l-1)
@@ -35,7 +35,7 @@ c
       plm(1,2)=0.d0
       plm(2,2)=0.d0
       plm(3,2)=15.d0*y
-      do l=4,ldegcut
+      do l=4,ldeg
         plm(l,2)=0.125d0*dble(l-1)*dble(l)*dble(l+1)*dble(2*l-1)*y
      &          +(dble(2*l-1)*x*plm(l-1,2)
      &           -dble(l+1)*plm(l-2,2))/dble(l-2)

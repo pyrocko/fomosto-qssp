@@ -8,7 +8,7 @@ c
 c
       include 'qpglobal.h'
 c
-      integer i,j
+      integer i
       double complex cldeg,cgl,ca2,cb2,cxi,c2mu,cgrdr
       double complex kpg,ksg,cfp,cfs,chp,chs,spa,spb,cxup,cx2
       double complex cllm1,cllp1,c2lp1,c2lp3,c22lp3
@@ -119,6 +119,6 @@ c
       cy(3,3)=c1
       cy(4,3)=c2mu*(cldeg-c1)
       cy(5,3)=cldeg*cgrdr-comi2
-      cy(6,3)=c2lp1*(cldeg*cgrdr-comi2)-cga(ly)*cldeg
+      cy(6,3)=c2lp1*(cldeg*cgrdr-comi2)-(3.d0,0.d0)*cldeg*cgrdr
       return
       end

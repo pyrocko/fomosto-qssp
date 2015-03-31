@@ -5,7 +5,7 @@ c     calculate fundamental solution vectors for homogeneous sphere
 c     for n = 0
 c
       integer ly
-      double complex cy(2)
+      double complex cy(3)
 c
       include 'qpglobal.h'
 c
@@ -35,5 +35,6 @@ c
 c
       cy(1)=spb
       cy(2)=(cla(ly)+c2mu)*cxup**2*spa+c2*c2mu*spb
+      cy(3)=-spa*c3*cgrdr
       return
       end

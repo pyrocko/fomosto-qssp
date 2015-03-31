@@ -9,20 +9,21 @@ c
       integer i,j,l,ir,ig,isg,is,is1,flen,iswap,nhypo
       double precision twindow,twinout,suppress,munit,sdfsel
       double precision strike,dip,rake,depdif,dswap(11)
-      character*800 grndir,outfile,fswap
+      character*80 grndir,outfile,fswap
+      character*180 comments
 c
 c     uniform receiver depth
 c     ======================
 c
-      call skip_comments(unit)
-      read(unit,*)dpr
+      call getdata(unit,comments)
+      read(comments,*)dpr
       dpr=KM2M*dpr
 c
 c     time (frequency) sampling
 c     =========================
 c
-      call skip_comments(unit)
-      read(unit,*)twindow,dt
+      call getdata(unit,comments)
+      read(comments,*)twindow,dt
       ntcut=1+idnint(twindow/dt)
       nt=2
 100   nt=2*nt
@@ -33,20 +34,20 @@ c
       endif
       df=1.d0/(dble(nt)*dt)
 c
-      call skip_comments(unit)
-      read(unit,*)fcut
+      call getdata(unit,comments)
+      read(comments,*)fcut
       nfcut=min0(nf,1+idnint(fcut/df))
       fcut=dble(nfcut-1)*df
-      call skip_comments(unit)
-      read(unit,*)slwmax
+      call getdata(unit,comments)
+      read(comments,*)slwmax
       if(slwmax.le.0.d0)then
         stop ' Error: bad selection of max. slowness!'
       else
         slwmax=slwmax/KM2M
       endif
 c
-      call skip_comments(unit)
-      read(unit,*)suppress
+      call getdata(unit,comments)
+      read(comments,*)suppress
       if(suppress.le.0.d0.or.suppress.ge.1.d0)then
         fi=0.d0
       else
@@ -56,8 +57,8 @@ c
 c     cutoffs of spectra
 c     ==================
 c
-      call skip_comments(unit)
-      read(unit,*)fgr,ldeggr
+      call getdata(unit,comments)
+      read(comments,*)fgr,ldeggr
       if(fgr.lt.0.d0)fgr=0.d0
       if(ldeggr.lt.0)ldeggr=0
       if(fgr.gt.0.d0.and.ldeggr.le.0.or.
@@ -66,20 +67,23 @@ c
       endif
       nogravity=fgr*dble(ldeggr).le.0.d0
 c
-      call skip_comments(unit)
-      read(unit,*)i,j, ldegmin
+      call getdata(unit,comments)
+      read(comments,*)i,j
       selpsv=i.eq.1
       selsh=j.eq.1
       if(.not.(selpsv.or.selsh))then
         stop ' Error: none of PSV and SH is selected!'
       endif
-      ldegmin=min0(max0(1+ndmax,ldegmin),ldegmax)
+      read(comments,*,end=110)i,j,ldegmin,ldegcut
+110   ldegcut=min0(ldegmax-ndmax-1,ldegcut)
+      if(ldegcut.lt.ldegmin)ldegcut=ldegmin
+      ldegmin=min0(max0(1+ndmax,ldegmin),ldegcut,ldegmax)
 c
 c     Green's function files
 c     ======================
 c
-      call skip_comments(unit)
-      read(unit,*)ngrn,rr0,grndir
+      call getdata(unit,comments)
+      read(comments,*)ngrn,rr0,grndir
       if(ngrn.le.0)then
         stop ' bad number of source depths!'
       else if(ngrn.gt.ngrnmax)then
@@ -88,8 +92,8 @@ c
       rr0=rr0*KM2M
 c
       do ig=1,ngrn
-        call skip_comments(unit)
-        read(unit,*)grndep(ig),grnfile(ig),grnsel(ig)
+        call getdata(unit,comments)
+        read(comments,*)grndep(ig),grnfile(ig),grnsel(ig)
         if(grnsel(ig).lt.0.or.grnsel(ig).gt.1)then
           stop ' bad Green function selection!'
         endif
@@ -116,7 +120,7 @@ c
         enddo
       enddo
 c
-      do flen=800,1,-1
+      do flen=80,1,-1
         if(grndir(flen:flen).ne.' ')goto 200
       enddo
 200   continue
@@ -133,21 +137,20 @@ c
 c     multi-event source parameters
 c     =============================
 c
-      call skip_comments(unit)
-      read(unit,*)ns,sdfsel
+      call getdata(unit,comments)
+      read(comments,*)ns,sdfsel
       if(ns.gt.nsmax)then
         stop ' Error: too many subevents'
       endif
       if(sdfsel.eq.1)then
         do is=1,ns
-          call skip_comments(unit)
+          call getdata(unit,comments)
 c
 c         the six moment-tensor elements: Mrr, Mtt, Mpp, Mrt, Mrp, Mtp
 c
-          read(unit,*)munit,mrr(is),mtt(is),mpp(is),
+          read(comments,*)munit,mrr(is),mtt(is),mpp(is),
      &                          mrt(is),mpr(is),mtp(is),
      &                    lats(is),lons(is),deps(is),togs(is),trss(is)
-
           mtt(is)=mtt(is)*munit
           mpp(is)=mpp(is)*munit
           mrr(is)=mrr(is)*munit
@@ -158,8 +161,8 @@ c
         enddo
       else if(sdfsel.eq.2)then
         do is=1,ns
-          call skip_comments(unit)
-          read(unit,*)munit,strike,dip,rake,
+          call getdata(unit,comments)
+          read(comments,*)munit,strike,dip,rake,
      &                    lats(is),lons(is),deps(is),togs(is),trss(is)
           call moments(munit,strike,dip,rake,
      &                 mtt(is),mpp(is),mrr(is),
@@ -244,27 +247,27 @@ c
 c     receiver parameters
 c     ===================
 c
-      call skip_comments(unit)
-      read(unit,*)outfile,ioutform
+      call getdata(unit,comments)
+      read(comments,*)outfile,ioutform
       if(ioutform.lt.1.or.ioutform.gt.2)then
         stop ' Error: bad selection of output format!'
       endif
-      call skip_comments(unit)
-      read(unit,*)twinout
+      call getdata(unit,comments)
+      read(comments,*)twinout
       ntcutout=min0(nt,1+idnint(twinout/dt))
-      call skip_comments(unit)
-      read(unit,*)nlpf,fcorner
-      call skip_comments(unit)
-      read(unit,*)slwlwcut,slwupcut
-      if(slwupcut.le.0.d0.or.slwlwcut.ge.slwupcut)then
+      call getdata(unit,comments)
+      read(comments,*)nlpf,f1corner,f2corner
+      call getdata(unit,comments)
+      read(comments,*)slwlwcut,slwupcut
+      if(slwlwcut.gt.slwupcut)then
         slwlwcut=0.d0
         slwupcut=slwmax
       else
         slwlwcut=slwlwcut/KM2M
         slwupcut=slwupcut/KM2M
       endif
-      call skip_comments(unit)
-      read(unit,*)nr
+      call getdata(unit,comments)
+      read(comments,*)nr
       if(nr.gt.nrmax)then
         stop ' Error: too many receivers'
       endif
@@ -288,11 +291,11 @@ c
       endif
 c
       do ir=1,nr
-        call skip_comments(unit)
-        read(unit,*)latr(ir),lonr(ir),rname(ir),tred(ir)
+        call getdata(unit,comments)
+        read(comments,*)latr(ir),lonr(ir),rname(ir),tred(ir)
       enddo
 c
-      do flen=800,1,-1
+      do flen=80,1,-1
         if(outfile(flen:flen).ne.' ')goto 300
       enddo
 300   continue
@@ -333,8 +336,8 @@ c
 c     multilayered model parameters
 c     =============================
 c
-      call skip_comments(unit)
-      read(unit,*)l,i
+      call getdata(unit,comments)
+      read(comments,*)l,i
       if(l.ge.lymax-2)then
         stop ' Error: lymax defined too small!'
       endif
@@ -348,8 +351,8 @@ c
       depatmos=0.d0
       rratmos=REARTH
       do i=1,l
-        call skip_comments(unit)
-        read(unit,*)j,dp0(i),vp0(i),vs0(i),ro0(i),qp0(i),qs0(i)
+        call getdata(unit,comments)
+        read(comments,*)j,dp0(i),vp0(i),vs0(i),ro0(i),qp0(i),qs0(i)
 c
 c       input units:    -,km,  km/s, km/s, g/cm^3,-,-
 c

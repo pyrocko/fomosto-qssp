@@ -13,27 +13,25 @@ c     work space
 c
       integer i,j,j0,istp,ly,key
       double precision y4max
-      double complex cdet,cyswap
+      double complex cdet,cyswap,cgrlyr,cgrly1
       double complex c0(6,3),c1(6,3),cc0(4,2),cc1(4,2)
-      double complex y0(6,3),y1(6,3),yc(6,3),uc(6)
+      double complex y0(6,3),y1(6,3),yc(6,3),uc(4)
       double complex yup(6,3),ylw(6,3),yupc(4,2),ylwc(4,2)
       double complex wave(6),orth(3,3),orthc(2,2)
       double complex coef6(6,6),b6(6,4),coef4(4,4),b4(4,2)
-c
-      double complex c3
-      data c3/(3.d0,0.d0)/
 c
 c===============================================================================
 c
 c     propagation from surface to atmosphere/ocean bottom
 c
-      if(lyr.lt.lyob.and.dreal(comi).le.0.d0)return
-      if(lyob.gt.1.and.dreal(comi).gt.0.d0)then
+      if(lyr.lt.lyob.and.cdabs(comi).le.0.d0)return
+      if(lyob.gt.1.and.cdabs(comi).gt.0.d0)then
         do j=1,2
           do i=1,4
             yupc(i,j)=(0.d0,0.d0)
           enddo
         enddo
+c
         yupc(1,1)=(1.d0,0.d0)
         yupc(3,2)=(1.d0,0.d0)
         do j=1,3
@@ -41,9 +39,22 @@ c
             yc(i,j)=(0.d0,0.d0)
           enddo
         enddo
-        yc(1,1)=yupc(1,1)
-        yc(5,2)=yupc(3,2)
-        if(lyr.eq.lyup)call cmemcpy(yc,y0,18)
+        do j=1,2
+          yc(1,j)=yupc(1,j)
+          yc(5,j)=yupc(3,j)
+        enddo
+c
+        if(lyr.eq.lyup)then
+          do j=1,2
+            do i=1,6
+              y0(i,j)=(0.d0,0.d0)
+            enddo
+          enddo
+          do j=1,2
+            y0(1,j)=yupc(1,j)
+            y0(5,j)=yupc(3,j)
+          enddo
+        endif
 c
         do ly=lyup,min0(lys-1,lyob-1)
           do j=1,3,2
@@ -72,7 +83,6 @@ c
               yc(i,j)=yc(i,j)*wave(2*j)
             enddo
           enddo
-c
           if(ly.ge.lyr)then
 c
 c           orthonormalization of the receiver vectors
@@ -102,7 +112,7 @@ c
             do j=1,2
               y0(1,j)=yupc(1,j)
               y0(2,j)=yupc(2,j)
-              y0(3,j)=-yupc(2,j)/(crolw(ly)*comi2*crrlw(ly)**2)
+              y0(3,j)=-yupc(2,j)/(cro(ly)*comi2*crrlw(ly)**2)
               y0(4,j)=(0.d0,0.d0)
               y0(5,j)=yupc(3,j)
               y0(6,j)=yupc(4,j)
@@ -113,11 +123,11 @@ c
           endif
         enddo
 c
-        ly=min0(lys-1,lyob-1)
+        ly=min0(lyob-1,lys-1)
         do j=1,2
           yup(1,j)=yupc(1,j)
           yup(2,j)=yupc(2,j)
-          yup(3,j)=-yupc(2,j)/(crolw(ly)*comi2*crrlw(ly)**2)
+          yup(3,j)=(0.d0,0.d0)
           yup(4,j)=(0.d0,0.d0)
           yup(5,j)=yupc(3,j)
           yup(6,j)=yupc(4,j)
@@ -232,7 +242,8 @@ c
         yup(4,j)=yup(4,j)/crrup(lys)**2
 c        yup(5,j)=yup(5,j)
         yup(6,j)=yup(6,j)/crrup(lys)
-c
+      enddo
+      do j=1,3
         yc(1,j)=yc(1,j)/crrup(lyup)
         yc(2,j)=yc(2,j)/crrup(lyup)**2
         yc(3,j)=yc(3,j)/crrup(lyup)
@@ -379,11 +390,7 @@ c
           do j=1,2
             y0(1,j)=ylwc(1,j)
             y0(2,j)=ylwc(2,j)
-            if(cdabs(comi2).gt.0.d0)then
-              y0(3,j)=-ylwc(2,j)/(croup(lylw)*comi2*crrup(lylw)**2)
-            else
-              y0(3,j)=(0.d0,0.d0)
-            endif
+            y0(3,j)=-ylwc(2,j)/(cro(lylw)*comi2*crrup(lylw)**2)
             y0(4,j)=(0.d0,0.d0)
             y0(5,j)=ylwc(3,j)
             y0(6,j)=ylwc(4,j)
@@ -441,11 +448,7 @@ c
           do j=1,2
             y0(1,j)=ylwc(1,j)
             y0(2,j)=ylwc(2,j)
-            if(cdabs(comi2).gt.0.d0)then
-              y0(3,j)=-ylwc(2,j)/(croup(ly)*comi2*crrup(ly)**2)
-            else
-              y0(3,j)=(0.d0,0.d0)
-            endif
+            y0(3,j)=-ylwc(2,j)/(cro(ly)*comi2*crrup(ly)**2)
             y0(4,j)=(0.d0,0.d0)
             y0(5,j)=ylwc(3,j)
             y0(6,j)=ylwc(4,j)
@@ -467,11 +470,7 @@ c
         do j=1,2
           ylw(1,j)=ylwc(1,j)
           ylw(2,j)=ylwc(2,j)
-          if(cdabs(comi2).gt.0.d0)then
-            ylw(3,j)=-ylwc(2,j)/(croup(lycm)*comi2*crrup(lycm)**2)
-          else
-            ylw(3,j)=(0.d0,0.d0)
-          endif
+          ylw(3,j)=(0.d0,0.d0)
           ylw(4,j)=(0.d0,0.d0)
           ylw(5,j)=ylwc(3,j)
           ylw(6,j)=ylwc(4,j)
@@ -621,11 +620,7 @@ c
           do j=1,2
             y0(1,j)=ylwc(1,j)
             y0(2,j)=ylwc(2,j)
-            if(cdabs(comi2).gt.0.d0)then
-              y0(3,j)=-ylwc(2,j)/(croup(lylw)*comi2*crrup(lylw)**2)
-            else
-              y0(3,j)=(0.d0,0.d0)
-            endif
+            y0(3,j)=-ylwc(2,j)/(cro(lylw)*comi2*crrup(lylw)**2)
             y0(4,j)=(0.d0,0.d0)
             y0(5,j)=ylwc(3,j)
             y0(6,j)=ylwc(4,j)
@@ -683,11 +678,7 @@ c
           do j=1,2
             y0(1,j)=ylwc(1,j)
             y0(2,j)=ylwc(2,j)
-            if(cdabs(comi2).gt.0.d0)then
-              y0(3,j)=-ylwc(2,j)/(croup(ly)*comi2*crrup(ly)**2)
-            else
-              y0(3,j)=(0.d0,0.d0)
-            endif
+            y0(3,j)=-ylwc(2,j)/(cro(ly)*comi2*crrup(ly)**2)
             y0(4,j)=(0.d0,0.d0)
             y0(5,j)=ylwc(3,j)
             y0(6,j)=ylwc(4,j)
@@ -701,11 +692,7 @@ c
         do j=1,2
           ylw(1,j)=ylwc(1,j)
           ylw(2,j)=ylwc(2,j)
-          if(cdabs(comi2).gt.0.d0)then
-            ylw(3,j)=-ylwc(2,j)/(croup(lys)*comi2*crrup(lys)**2)
-          else
-            ylw(3,j)=(0.d0,0.d0)
-          endif
+          ylw(3,j)=-ylwc(2,j)/(cro(lys)*comi2*crrup(lys)**2)
           ylw(4,j)=(0.d0,0.d0)
           ylw(5,j)=ylwc(3,j)
           ylw(6,j)=ylwc(4,j)
@@ -737,6 +724,17 @@ c===============================================================================
 c     source function
 c===============================================================================
 c
+      cgrlyr=cga(lylw)*crrup(lylw)**3
+      do ly=lylw-1,lyr,-1
+        cgrlyr=cgrlyr+cga(ly)*(crrup(ly)**3-crrlw(ly)**3)
+      enddo
+      cgrly1=cgrlyr
+      do ly=lyr-1,lyup,-1
+        cgrly1=cgrly1+cga(ly)*(crrup(ly)**3-crrlw(ly)**3)
+      enddo
+      cgrlyr=cgrlyr/(3.d0,0.d0)/crrup(lyr)**2
+      cgrly1=cgrly1/(3.d0,0.d0)/crrup(lyup)**2
+c
       if(lys.lt.lyob)then
         do istp=1,2
           do i=1,4
@@ -760,15 +758,12 @@ c
           print *,' Warning in qpsprop1: anormal exit from cdgemp!'
           return
         endif
-c
-c       uc = translational motion of earth's centre of mass
-c
         do istp=1,2
           uc(istp)=(0.d0,0.d0)
           do j=1,2
             uc(istp)=uc(istp)+b4(j,istp)*yc(5,j)
           enddo
-          uc(istp)=uc(istp)/cgrup(lyup)
+          uc(istp)=uc(istp)/cgrly1
         enddo
         if(lyr.le.lys)then
           do istp=1,2
@@ -814,15 +809,12 @@ c
           print *,' Warning in qpsprop1: anormal exit from cdgemp!'
           return
         endif
-c
-c       uc = translational motion of earth's centre of mass
-c
         do istp=1,4
           uc(istp)=(0.d0,0.d0)
           do j=1,3
             uc(istp)=uc(istp)+b6(j,istp)*yc(5,j)
           enddo
-          uc(istp)=uc(istp)/cgrup(lyup)
+          uc(istp)=uc(istp)/cgrly1
         enddo
         if(lyr.le.lys)then
           do istp=1,4
@@ -845,12 +837,13 @@ c
         endif
       endif
 c
-c     transform to motion relative to the centre of mass
+c     since earthquake is internal source,
+c     the reference frame used should be inertial.
 c
       do istp=1,4
         ypsv(1,istp)=ypsv(1,istp)-uc(istp)
         ypsv(3,istp)=ypsv(3,istp)-uc(istp)
-        ypsv(5,istp)=ypsv(5,istp)-uc(istp)*cgrup(lyr)
+        ypsv(5,istp)=ypsv(5,istp)-uc(istp)*cgrlyr
       enddo
       return
       end

@@ -76,7 +76,7 @@ c
       cy(1,2)=cldeg
       cy(2,2)=c1
       cy(3,2)=cldeg*cgrdr-comi2
-      cy(4,2)=c2lp1*(cldeg*cgrdr-comi2)-cga(ly)*cldeg
+      cy(4,2)=c2lp1*(cldeg*cgrdr-comi2)-(3.d0,0.d0)*cldeg*cgrdr
 c
 c     Note:
 c       y1 <- y1 (normal displacement)

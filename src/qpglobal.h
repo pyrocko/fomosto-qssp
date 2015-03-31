@@ -12,6 +12,8 @@ c     =========
       parameter(FLTAPER=0.2d0)
       double precision FSBUP,FSBLW,FSBREF
       parameter(FSBUP=0.1d+02,FSBLW=0.5d-03,FSBREF=1.0d+00)
+      double precision fbvatm,fbvocean,fbvcore
+      parameter(fbvatm=1.0d-03,fbvocean=0.0d+00,fbvcore=1.0d-06)
 
 c     GLOBAL INDEX PARAMETERS FOR DEFINING ARRAYS
 c     ===========================================
@@ -23,8 +25,8 @@ c     nfmax: max. number of frequency samples
 c     ldegmax: max. degree of Legendre polynomials
 c
       integer lymax,nrmax,nsmax,ngrnmax,nfmax,ldegmax,ndmax
-      parameter(nrmax=51,nsmax=1500,ngrnmax=50)
-      parameter(nfmax=16384,ldegmax=20000)
+      parameter(nrmax=51,nsmax=500,ngrnmax=50)
+      parameter(nfmax=8192,ldegmax=20000)
       parameter(lymax=250+ngrnmax)
       parameter(ndmax=4)
 c
@@ -51,7 +53,8 @@ c     (r,t,p = displacement, s = sound, g = gravity, v,w = tilt)
 c     grnfile = file name of Green's function spectra
 c
       logical nogravity,selpsv,selsh
-      integer ngrn,nt,ntcut,ntcutout,nf,nfcut,nlpf,ldeggr,ldegmin
+      integer ngrn,nt,ntcut,ntcutout,nf,nfcut,nlpf
+	  integer ldeggr,ldegmin,ldegcut
       integer lygrn(ngrnmax),grnsel(ngrnmax)
       integer ldegpsv(lymax),ldegsh(lymax)
       double precision dt,df,fi,fcut,fgr,rratmos,depatmos,rr0
@@ -61,14 +64,14 @@ c
       complex yp(0:ldegmax,4,0:ndmax),ys(0:ldegmax,4,0:ndmax)
       complex yg(0:ldegmax,4,0:ndmax),yv(0:ldegmax,4,0:ndmax)
       complex yw(0:ldegmax,4,0:ndmax)
-      character*800 grnfile(ngrnmax),
+      character*80 grnfile(ngrnmax),
      &             rgrnfile(ngrnmax),tgrnfile(ngrnmax),
      &             pgrnfile(ngrnmax),sgrnfile(ngrnmax),
      &             ggrnfile(ngrnmax),vgrnfile(ngrnmax),
      &             wgrnfile(ngrnmax)
       common /lgreen/ nogravity,selpsv,selsh
       common /igreen/ ngrn,nt,ntcut,ntcutout,nf,nfcut,nlpf,
-     &                ldeggr,ldegmin,lygrn,grnsel,ldegpsv,ldegsh
+     &                ldeggr,ldegmin,ldegcut,lygrn,grnsel,ldegpsv,ldegsh
       common /dgreen/ dt,df,fi,fcut,fgr,rratmos,depatmos,rr0,
      &                grndep,comi,comi2
       common /rgreen/ yr,yt,yp,ys,yg,yv,yw
@@ -77,8 +80,8 @@ c
 c
 c     slowness cut-offs
 c
-      double precision slwmax,slwlwcut,slwupcut,fcorner
-      common /dslwcutoffs/ slwmax,slwlwcut,slwupcut,fcorner
+      double precision slwmax,slwlwcut,slwupcut,f1corner,f2corner
+      common /dslwcutoffs/ slwmax,slwlwcut,slwupcut,f1corner,f2corner
 c
 c     RECEIVER PARAMETERS
 c     ===================
@@ -102,7 +105,7 @@ c
       double complex ug(nfmax,nrmax),uv(nfmax,nrmax)
       double complex uw(nfmax,nrmax)
       character*10 rname(nrmax)
-      character*800 uxout,uyout,uzout,
+      character*80 uxout,uyout,uzout,
      &             vxout,vyout,vzout,
      &             axout,ayout,azout,
      &             sdout,grout,tvout,
@@ -242,7 +245,7 @@ c     kp = omi/vp, ks = omi/vs (sv), kt = omi/vs (sh)
 c     cps = phase term of psv propagator
 c     cpt = phase term of sh propagator
 c     mat2x2 = 2x2 toroidal solution matrix
-c     mas2x2 = 2x2 spheroidal solution matrix (l = 0)
+c     mas3x3 = 3x3 spheroidal solution matrix (l = 0)
 c     mas4x4 = 4x4 spheroidal solution matrix (l > 0, in liquid)
 c     mas6x6 = 6x6 spheroidal solution matrix (l > 0, in solid)
 c     mas(t)inv = inverse solution matrix
@@ -251,15 +254,15 @@ c
       double complex cps(6,lymax),cpt(2,lymax)
       double complex mat2x2up(2,2,lymax),mat2x2lw(2,2,lymax)
       double complex mat2x2inv(2,2,lymax)
-	  double complex mas2x2up(2,2,lymax),mas2x2lw(2,2,lymax)
-      double complex mas2x2inv(2,2,lymax)
+	  double complex mas3x3up(3,3,lymax),mas3x3lw(3,3,lymax)
+      double complex mas3x3inv(3,3,lymax)
 	  double complex mas4x4up(4,4,lymax),mas4x4lw(4,4,lymax)
       double complex mas4x4inv(4,4,lymax)
 	  double complex mas6x6up(6,6,lymax),mas6x6lw(6,6,lymax)
       double complex mas6x6inv(6,6,lymax)
       common /matrix/ kp,ks,kt,cps,cpt,
      &                mat2x2up,mat2x2lw,mat2x2inv,
-     &                mas2x2up,mas2x2lw,mas2x2inv,
+     &                mas3x3up,mas3x3lw,mas3x3inv,
      &                mas4x4up,mas4x4lw,mas4x4inv,
      &                mas6x6up,mas6x6lw,mas6x6inv
 c
@@ -287,9 +290,3 @@ c     cua = solution describing rigid motion of the earth
 c
       double complex cua(8,6),cypnorm(6,lymax)
       common /masscenteracc/ cua,cypnorm
-c
-c     mmantle = inertia moment of mantle
-c     mshell = inertia moment of shells in mantle
-c
-      double precision mmantle,mshell(lymax)
-      common /mantlemoment/ mmantle,mshell

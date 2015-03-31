@@ -68,9 +68,6 @@ c
       mas4x4up(4,4,ly)=(0.d0,0.d0)
 c
       if(ly.eq.lylw)return
-      if(dreal(comi).le.0.d0)then
-        stop ' No static deformation within nongravitational liquid!'
-      endif
 c
 c     for lower radius
 c

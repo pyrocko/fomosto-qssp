@@ -25,7 +25,7 @@ c
       enddo
       lyup=lyupatm(ldeg)
       lylw=lylwpsv(ldeg)
-      if(lylw.lt.max0(lys,lyr).or.f.le.0.d0.and.ldeg.eq.1)return
+      if(lylw.lt.max0(lys,lyr).or.f.le.0.d0)return
 c
       if(f.le.0.d0)then
         lylw=min0(lylw,lycm)
@@ -136,10 +136,12 @@ c
             lwup=0
             cps(1,ly)=-wj(ldeg,ly,1)
             cps(2,ly)=-wh(ldeg,ly,1)
+            cps(3,ly)=(0.d0,0.d0)
           else
             lwup=1
             cps(1,ly)=wj(ldeg,ly,1)
             cps(2,ly)=wh(ldeg,ly,1)
+            cps(3,ly)=(0.d0,0.d0)
           endif
           call qpsmat0(ly,lwup)
         enddo

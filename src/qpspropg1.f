@@ -14,13 +14,10 @@ c
       integer i,j,i0,j0,istp,ly,key
       double precision y4max
       double complex cdet,alf,bet,cyabs,cyswap,ca,cb
-      double complex y0(6,3),yc(6,3),uc(6)
+      double complex y0(6,3),c(2),yc(6,3),y5c(4)
       double complex yup(6,3),ylw(6,3),yupc(4,2),ylwc(4,2)
       double complex coef6(6,6),b6(6,4),coef4(4,4),b4(4,2)
-      external qpdifmat4,qpdifmat6
-c
-      double complex c3
-      data c3/(3.d0,0.d0)/
+      external qpdifmatl,qpdifmats
 c
 c===============================================================================
 c
@@ -33,41 +30,36 @@ c
           enddo
         enddo
 c
-        yupc(1,1)=comi2*crrup(lyup)
-        yupc(2,1)=cgrup(lyup)
+c       Method:
+c       Solve the solution using earth's mass center system
+c       Movement of the mass center satisfies the external condition: y5 = -omi**2*r*yc
 c
-        yupc(2,2)=(1.d0,0.d0)
-        yupc(3,2)=-comi2
+        yupc(1,1)=comi2*crrup(lyup)/cgrup(lyup)
+        yupc(2,1)=(1.d0,0.d0)
 c
-        if(lyr.eq.lyup)then
-          do j=1,3
-            do i=1,6
-              y0(i,j)=(0.d0,0.d0)
-            enddo
-          enddo
-c
-          y0(1,1)=yupc(1,1)
-          y0(3,1)=yupc(2,1)
-c
-          y0(3,2)=yupc(2,2)
-          y0(5,2)=yupc(3,2)
-c
-        endif
+        yupc(1,2)=crrup(lyup)/cgrup(lyup)
+        yupc(3,2)=(1.d0,0.d0)
+        yupc(4,2)=(3.d0,0.d0)
 c
         do j=1,3
           do i=1,6
             yc(i,j)=(0.d0,0.d0)
           enddo
         enddo
+        do j=1,2
+          yc(1,j)=yupc(1,j)
+          yc(2,j)=croup(1)*crrup(1)**2
+     &            *(yupc(1,j)*cgrup(1)/crrup(1)
+     &            -comi2*yupc(2,j)-yupc(3,j))
+          yc(3,j)=yupc(2,j)
+          yc(5,j)=yupc(3,j)
+          yc(6,j)=yupc(4,j)
+        enddo
 c
-        yc(1,1)=yupc(1,1)
-        yc(3,1)=yupc(2,1)
-c
-        yc(3,2)=yupc(2,2)
-        yc(5,2)=yupc(3,2)
+        if(lyr.eq.lyup)call cmemcpy(yc,y0,18)
 c
         do ly=lyup,min0(lys-1,lyob-1)
-          if(ly.gt.lyup.and.ly.eq.lyos)then
+          if(lyup.lt.lyos.and.lyob.gt.lyos.and.ly.eq.lyos)then
 c
 c           interface ocean-atmosphere
 c
@@ -84,6 +76,7 @@ c
      &                 +ca*(croup(ly)-crolw(ly-1)))/croup(ly)
               yupc(3,1)=yupc(3,1)*comi2
               yupc(4,1)=yupc(4,1)*comi2
+c
               do i=1,6
                 yc(i,2)=yc(i,1)*cb-yc(i,2)*ca
                 yc(i,1)=yc(i,1)*comi2
@@ -105,6 +98,7 @@ c
      &                 +cb*(croup(ly)-crolw(ly-1)))/croup(ly)
               yupc(3,2)=yupc(3,2)*comi2
               yupc(4,2)=yupc(4,2)*comi2
+c
               do i=1,6
                 yc(i,1)=yc(i,1)*cb-yc(i,2)*ca
                 yc(i,2)=yc(i,2)*comi2
@@ -168,7 +162,7 @@ c
             enddo
           endif
 c
-          call ruku(yupc,4,2,ly,1,qpdifmat4,rrup(ly),rrlw(ly))
+          call ruku(yupc,4,2,ly,1,qpdifmatl,rrup(ly),rrlw(ly))
           if(ly.eq.lyr-1)then
             do j=1,3
               do i=1,6
@@ -216,6 +210,7 @@ c
         yup(1,1)=(1.d0,0.d0)
         yup(3,2)=(1.d0,0.d0)
         yup(5,3)=(1.d0,0.d0)
+        yup(6,3)=(3.d0,0.d0)
         call cmemcpy(yup,yc,18)
         if(lyr.eq.lyup)call cmemcpy(yup,y0,18)
       endif
@@ -310,7 +305,7 @@ c
           enddo
         endif
 c
-        call ruku(yup,6,3,ly,1,qpdifmat6,rrup(ly),rrlw(ly))
+        call ruku(yup,6,3,ly,1,qpdifmats,rrup(ly),rrlw(ly))
         if(ly.eq.lyr-1)call cmemcpy(yup,y0,18)
       enddo
 c
@@ -319,15 +314,15 @@ c
         yup(2,j)=yup(2,j)/crrup(lys)**2
         yup(3,j)=yup(3,j)/crrup(lys)
         yup(4,j)=yup(4,j)/crrup(lys)**2
-c        yup(5,j)=yup(5,j)
+c       yup(5,j)=yup(5,j)
         yup(6,j)=yup(6,j)/crrup(lys)
 c
-        yc(1,j)=yc(1,j)/crrup(lyup)
-        yc(2,j)=yc(2,j)/crrup(lyup)**2
-        yc(3,j)=yc(3,j)/crrup(lyup)
-        yc(4,j)=yc(4,j)/crrup(lyup)**2
-c        yc(5,j)=yc(5,j)
-        yc(6,j)=yc(6,j)/crrup(lyup)
+        yc(1,j)=yc(1,j)/crrup(1)
+        yc(2,j)=yc(2,j)/crrup(1)**2
+        yc(3,j)=yc(3,j)/crrup(1)
+        yc(4,j)=yc(4,j)/crrup(1)**2
+c       yc(5,j)=yc(5,j)
+        yc(6,j)=yc(6,j)/crrup(1)
       enddo
 c
 c===============================================================================
@@ -339,6 +334,10 @@ c
 c       lowest layer is within inner core
 c
         call qpstart6(1,lylw,ylw)
+        do i=1,6
+          ylw(i,3)=(0.d0,0.d0)
+        enddo
+c
         if(lylw.eq.lyr.and.lylw.gt.lys)then
           call cmemcpy(ylw,y0,12)
         endif
@@ -386,9 +385,10 @@ c
           enddo
         endif
 c
-        call ruku(ylw,6,2,ly,1,qpdifmat6,rrlw(ly),rrup(ly))
+        call ruku(ylw,6,2,ly,1,qpdifmats,rrlw(ly),rrup(ly))
         if(ly.eq.lyr.and.ly.gt.lys)call cmemcpy(ylw,y0,12)
       enddo
+c
 c===============================================================================
 c
 c     propagation within outer core
@@ -401,76 +401,97 @@ c
         ylwc(2,1)=ylw(4,2)*ylw(2,1)-ylw(4,1)*ylw(2,2)
         ylwc(3,1)=ylw(4,2)*ylw(5,1)-ylw(4,1)*ylw(5,2)
         ylwc(4,1)=ylw(4,2)*ylw(6,1)-ylw(4,1)*ylw(6,2)
-c
-c       y2 = Ur
-c
-        ylwc(2,1)=-ylwc(2,1)/crolw(lycc-1)/crrlw(lycc-1)**2
-     &         +ylwc(1,1)*cgrlw(lycc-1)/crrlw(lycc-1)-ylwc(3,1)
-        ylwc(1,1)=ylwc(1,1)*comi2
-        ylwc(3,1)=ylwc(3,1)*comi2
-        ylwc(4,1)=ylwc(4,1)*comi2
         if(lycc.le.lyr.and.lycc.gt.lys)then
           do i=1,6
-            y0(i,1)=(ylw(4,2)*y0(i,1)-ylw(4,1)*y0(i,2))*comi2
+            y0(i,1)=ylw(4,2)*y0(i,1)-ylw(4,1)*y0(i,2)
+          enddo
+          do i=1,6
             y0(i,2)=(0.d0,0.d0)
           enddo
+        endif
+c
+c       y2 = Ut
+c
+        if(cdabs(comi2).gt.0.d0)then
+          c(1)=-ylwc(2,1)/crolw(lycc-1)/crrlw(lycc-1)**2
+     &        +ylwc(1,1)*cgrlw(lycc-1)/crrlw(lycc-1)-ylwc(3,1) 
+          do i=1,4
+            ylwc(i,1)=comi2*ylwc(i,1)
+          enddo
+          ylwc(2,1)=c(1)
+          if(lycc.le.lyr.and.lycc.gt.lys)then
+            do i=1,6
+              y0(i,1)=comi2*y0(i,1)
+            enddo
+          endif
+        else
+          do i=1,4
+            ylwc(i,1)=(0.d0,0.d0)
+          enddo
+          ylwc(2,1)=(1.d0,0.d0)
+          if(lycc.le.lyr.and.lycc.gt.lys)then
+            do i=1,6
+              y0(i,1)=(0.d0,0.d0)
+            enddo
+          endif
         endif
       else if(lylw.ge.lycm)then
 c
 c       lowest layer is within the liquid core
 c
-        if(cdabs(comi).gt.0.d0)then
+        call qpstart4(1,lylw,ylwc)
+        do i=1,4
+          ylwc(i,2)=(0.d0,0.d0)
+        enddo
 c
-c         compressible liquid for dynamic response
-c
-          call qpstart4(1,lylw,ylwc)
-          do i=1,4
-            ylwc(i,2)=(0.d0,0.d0)
-          enddo
-        else
-c
-c         incompressible liquid used for static response
-c
-          do j=1,2
-            do i=1,4
-              ylwc(i,j)=(0.d0,0.d0)
+        if(lylw.eq.lyr.and.lylw.gt.lys)then
+          do j=1,3
+            do i=1,6
+              y0(i,j)=(0.d0,0.d0)
             enddo
           enddo
-c
-          ylwc(3,1)=(1.d0,0.d0)
-          ylwc(4,1)=(3.d0,0.d0)
-        endif
-        if(lylw.eq.lyr.and.lylw.gt.lys)then
           y0(1,1)=ylwc(1,1)
           y0(2,1)=croup(lylw)*crrup(lylw)**2
-     &            *(ylwc(1,1)*cgrup(lylw)/crrup(lylw)
+     &           *(ylwc(1,1)*cgrup(lylw)/crrup(lylw)
      &            -comi2*ylwc(2,1)-ylwc(3,1))
           y0(3,1)=ylwc(2,1)
-          y0(4,1)=(0.d0,0.d0)
           y0(5,1)=ylwc(3,1)
           y0(6,1)=ylwc(4,1)
-          do i=1,6
-            y0(i,2)=(0.d0,0.d0)
-          enddo
         endif
       endif
 c
       do ly=min0(lylw-1,lycc-1),lycm,-1
-        call ruku(ylwc,4,1,ly,1,qpdifmat4,rrlw(ly),rrup(ly))
+        cyabs=(0.d0,0.d0)
+        do i=1,4
+          cyabs=cyabs+ylwc(i,1)*dconjg(ylwc(i,1))/cypnorm(i,ly)**2
+        enddo
+        cyabs=(1.d0,0.d0)/cdsqrt(cyabs)
+        do i=1,4
+          ylwc(i,1)=ylwc(i,1)*cyabs
+        enddo
+        if(ly.lt.lyr)then
+          do i=1,6
+            y0(i,1)=y0(i,1)*cyabs
+          enddo
+        endif
+c
+        call ruku(ylwc,4,1,ly,1,qpdifmatl,rrlw(ly),rrup(ly))
         if(ly.eq.lyr.and.ly.gt.lys)then
+          do j=1,3
+            do i=1,6
+              y0(i,j)=(0.d0,0.d0)
+            enddo
+          enddo
           y0(1,1)=ylwc(1,1)
           y0(2,1)=croup(ly)*crrup(ly)**2
      &           *(ylwc(1,1)*cgrup(ly)/crrup(ly)
-     &           -comi2*ylwc(2,1)-ylwc(3,1))
+     &              -comi2*ylwc(2,1)-ylwc(3,1))
           y0(3,1)=ylwc(2,1)
-          y0(4,1)=(0.d0,0.d0)
           y0(5,1)=ylwc(3,1)
           y0(6,1)=ylwc(4,1)
-          do i=1,6
-            y0(i,2)=(0.d0,0.d0)
-          enddo
         endif
       enddo
+c
 c===============================================================================
 c
 c     propagation from core-mantle boundary to source or ocean bottom
@@ -503,7 +524,9 @@ c
 c       lowest layer is within the mantle
 c
         call qpstart6(1,lylw,ylw)
-c
+        do i=1,6
+          ylw(i,3)=(0.d0,0.d0)
+        enddo
         if(lylw.eq.lyr.and.lylw.gt.lys)then
           call cmemcpy(ylw,y0,12)
         endif
@@ -551,7 +574,7 @@ c
           enddo
         endif
 c
-        call ruku(ylw,6,2,ly,1,qpdifmat6,rrlw(ly),rrup(ly))
+        call ruku(ylw,6,2,ly,1,qpdifmats,rrlw(ly),rrup(ly))
         if(ly.eq.lyr.and.ly.gt.lys)call cmemcpy(ylw,y0,12)
       enddo
 c
@@ -567,100 +590,134 @@ c
         ylwc(2,1)=ylw(4,2)*ylw(2,1)-ylw(4,1)*ylw(2,2)
         ylwc(3,1)=ylw(4,2)*ylw(5,1)-ylw(4,1)*ylw(5,2)
         ylwc(4,1)=ylw(4,2)*ylw(6,1)-ylw(4,1)*ylw(6,2)
+        if(lyob.le.lyr.and.lyob.gt.lys)then
+          do i=1,6
+            y0(i,1)=ylw(4,2)*y0(i,1)-ylw(4,1)*y0(i,2)
+          enddo
+          do i=1,6
+            y0(i,2)=(0.d0,0.d0)
+          enddo
+        endif
 c
 c       y2 = Ut
 c
-        ylwc(2,1)=-ylwc(2,1)/crolw(lyob-1)/crrlw(lyob-1)**2
-     &         +ylwc(1,1)*cgrlw(lyob-1)/crrlw(lyob-1)-ylwc(3,1)
-        ylwc(1,1)=ylwc(1,1)*comi2
-        ylwc(3,1)=ylwc(3,1)*comi2
-        ylwc(4,1)=ylwc(4,1)*comi2
-        if(lyob.le.lyr.and.lyob.gt.lys)then
-          do i=1,6
-            y0(i,1)=(ylw(4,2)*y0(i,1)-ylw(4,1)*y0(i,2))*comi2
-            y0(i,2)=(0.d0,0.d0)
-          enddo
-        endif
-      else if(lys.lt.lyob)then
-c
-c       lowest layer is within atmosphere
-c
-        if(cdabs(comi).gt.0.d0)then
-c
-c         compressible liquid for dynamic response
-c
-          call qpstart4(1,lylw,ylwc)
+        if(cdabs(comi2).gt.0.d0)then
+          c(1)=-ylwc(2,1)/crolw(lyob-1)/crrlw(lyob-1)**2
+     &        +ylwc(1,1)*cgrlw(lyob-1)/crrlw(lyob-1)-ylwc(3,1)
           do i=1,4
-            ylwc(i,2)=(0.d0,0.d0)
+            ylwc(i,1)=comi2*ylwc(i,1)
           enddo
-        else
-c
-c         incompressible liquid used for static response
-c
-          do j=1,2
-            do i=1,4
-              ylwc(i,j)=(0.d0,0.d0)
+          ylwc(2,1)=c(1)
+          if(lyob.le.lyr.and.lyob.gt.lys)then
+            do i=1,6
+              y0(i,1)=comi2*y0(i,1)
             enddo
+          endif
+        else
+          do i=1,4
+            ylwc(i,1)=(0.d0,0.d0)
           enddo
-c
-          ylwc(3,1)=(1.d0,0.d0)
-          ylwc(4,1)=(3.d0,0.d0)
+          ylwc(2,1)=(1.d0,0.d0)
+          if(lyob.le.lyr.and.lyob.gt.lys)then
+            do i=1,6
+              y0(i,1)=(0.d0,0.d0)
+            enddo
+          endif
         endif
+      else if(lylw.lt.lyob.and.lys.lt.lyob)then
+c
+c       lowest layer is within the atmosphere
+c
+        call qpstart4(1,lylw,ylwc)
+        do i=1,4
+          ylwc(i,2)=(0.d0,0.d0)
+        enddo
 c
         if(lylw.eq.lyr.and.lylw.gt.lys)then
+          do j=1,3
+            do i=1,6
+              y0(i,j)=(0.d0,0.d0)
+            enddo
+          enddo
           y0(1,1)=ylwc(1,1)
           y0(2,1)=croup(lylw)*crrup(lylw)**2
-     &            *(ylwc(1,1)*cgrup(lylw)/crrup(lylw)
+     &           *(ylwc(1,1)*cgrup(lylw)/crrup(lylw)
      &            -comi2*ylwc(2,1)-ylwc(3,1))
           y0(3,1)=ylwc(2,1)
-          y0(4,1)=(0.d0,0.d0)
           y0(5,1)=ylwc(3,1)
           y0(6,1)=ylwc(4,1)
-          do i=1,6
-            y0(i,2)=(0.d0,0.d0)
-          enddo
         endif
       endif
 c
       do ly=min0(lylw-1,lyob-1),lys,-1
-        if(ly.eq.lyos-1)then
+        if(lyob.gt.lyos.and.ly.eq.lyos-1)then
 c
 c         interface ocean-atmosphere
 c
-          ylwc(2,1)=(ylwc(2,1)*croup(ly+1)*comi2
-     &          +(cgrlw(ly)*ylwc(1,1)/crrlw(ly)-ylwc(3,1))
-     &          *(crolw(ly)-croup(ly+1)))/crolw(ly)
-          ylwc(1,1)=ylwc(1,1)*comi2
-          ylwc(3,1)=ylwc(3,1)*comi2
-          ylwc(4,1)=ylwc(4,1)*comi2
-          if(ly.lt.lyr)then
-            do i=1,6
-              y0(i,1)=y0(i,1)*comi2
+          if(cdabs(comi2).gt.0.d0)then
+            c(2)=croup(ly+1)*crrup(ly+1)**2
+     &          *(cgrup(ly+1)*ylwc(1,1)/crrup(ly+1)
+     &           -comi2*ylwc(2,1)-ylwc(3,1))
+c
+            ylwc(2,1)=c(2)/(crolw(ly)*crrlw(ly)**2)
+     &               +cgrlw(ly)*ylwc(1,1)/crrlw(ly)-ylwc(3,1)
+            ylwc(1,1)=comi2*ylwc(1,1)
+            ylwc(3,1)=comi2*ylwc(3,1)
+            ylwc(4,1)=comi2*ylwc(4,1)
+            if(ly.lt.lyr)then
+              do i=1,6
+                y0(i,1)=y0(i,1)*comi2
+              enddo
+            endif
+          else
+            do i=1,4
+              ylwc(i,1)=(0.d0,0.d0)
             enddo
+            ylwc(2,1)=(1.d0,0.d0)
+            if(ly.lt.lyr)then
+              do i=1,6
+                y0(i,1)=(0.d0,0.d0)
+              enddo
+            endif
           endif
         endif
 c
-        call ruku(ylwc,4,1,ly,1,qpdifmat4,rrlw(ly),rrup(ly))
+        cyabs=(0.d0,0.d0)
+        do i=1,4
+          cyabs=cyabs+ylwc(i,1)*dconjg(ylwc(i,1))/cypnorm(i,ly)**2
+        enddo
+        cyabs=(1.d0,0.d0)/cdsqrt(cyabs)
+        do i=1,4
+          ylwc(i,1)=ylwc(i,1)*cyabs
+        enddo
+        if(ly.lt.lyr)then
+          do i=1,6
+            y0(i,1)=y0(i,1)*cyabs
+          enddo
+        endif
+c
+        call ruku(ylwc,4,1,ly,1,qpdifmatl,rrlw(ly),rrup(ly))
         if(ly.eq.lyr.and.ly.gt.lys)then
+          do j=1,3
+            do i=1,6
+              y0(i,j)=(0.d0,0.d0)
+            enddo
+          enddo
           y0(1,1)=ylwc(1,1)
           y0(2,1)=croup(ly)*crrup(ly)**2
-     &            *(ylwc(1,1)*cgrup(ly)/crrup(ly)
+     &           *(ylwc(1,1)*cgrup(ly)/crrup(ly)
      &            -comi2*ylwc(2,1)-ylwc(3,1))
           y0(3,1)=ylwc(2,1)
-          y0(4,1)=(0.d0,0.d0)
           y0(5,1)=ylwc(3,1)
           y0(6,1)=ylwc(4,1)
-          do i=1,6
-            y0(i,2)=(0.d0,0.d0)
-          enddo
         endif
       enddo
       if(lys.lt.lyob)then
         ylw(1,1)=ylwc(1,1)
         ylw(2,1)=croup(lys)*crrup(lys)**2
      &          *(ylwc(1,1)*cgrup(lys)/crrup(lys)
-     &          -comi2*ylwc(2,1)-ylwc(3,1))
-        ylw(3,1)=ylwc(2,1)
+     &           -comi2*ylwc(2,1)-ylwc(3,1))
+        ylw(3,1)=(0.d0,0.d0)
         ylw(4,1)=(0.d0,0.d0)
         ylw(5,1)=ylwc(3,1)
         ylw(6,1)=ylwc(4,1)
@@ -687,32 +744,23 @@ c        ylw(5,j)=ylw(5,j)
       ylw(3,j0)=(1.d0,0.d0)
       ylw(4,j0)=(0.d0,0.d0)
       ylw(5,j0)=cgrup(lys)-comi2*crrup(lys)
-      ylw(6,j0)=-c3*comi2
+      ylw(6,j0)=-(3.d0,0.d0)*comi2
 c
-      if(lyr.le.lys)then
-        do j=1,j0
-          y0(1,j)=y0(1,j)/crrup(lyr)
-          y0(2,j)=y0(2,j)/crrup(lyr)**2
-          y0(3,j)=y0(3,j)/crrup(lyr)
-          y0(4,j)=y0(4,j)/crrup(lyr)**2
-c          y0(5,j)=y0(5,j)
-          y0(6,j)=y0(6,j)/crrup(lyr)
-        enddo
-      else
-        do j=1,j0-1
-          y0(1,j)=y0(1,j)/crrup(lyr)
-          y0(2,j)=y0(2,j)/crrup(lyr)**2
-          y0(3,j)=y0(3,j)/crrup(lyr)
-          y0(4,j)=y0(4,j)/crrup(lyr)**2
-c          y0(5,j)=y0(5,j)
-          y0(6,j)=y0(6,j)/crrup(lyr)
-        enddo
+      do j=1,3
+        y0(1,j)=y0(1,j)/crrup(lyr)
+        y0(2,j)=y0(2,j)/crrup(lyr)**2
+        y0(3,j)=y0(3,j)/crrup(lyr)
+        y0(4,j)=y0(4,j)/crrup(lyr)**2
+c        y0(5,j)=y0(5,j)
+        y0(6,j)=y0(6,j)/crrup(lyr)
+      enddo
+      if(lyr.gt.lys)then
         y0(1,j0)=(1.d0,0.d0)
         y0(2,j0)=(0.d0,0.d0)
         y0(3,j0)=(1.d0,0.d0)
         y0(4,j0)=(0.d0,0.d0)
         y0(5,j0)=cgrup(lyr)-comi2*crrup(lyr)
-        y0(6,j0)=-c3*comi2
+        y0(6,j0)=-(3.d0,0.d0)*comi2
       endif
 c
 c===============================================================================
@@ -742,15 +790,11 @@ c
           print *,' Warning in qpspropg1: anormal exit from cdgemp!'
           return
         endif
-c
-c       uc = translational motion of earth's centre of mass
-c
         do istp=1,2
-          uc(istp)=(0.d0,0.d0)
+          y5c(istp)=(0.d0,0.d0)
           do j=1,2
-            uc(istp)=uc(istp)+b4(j,istp)*yc(5,j)
+            y5c(istp)=y5c(istp)+b4(j,istp)*yc(5,j)
           enddo
-          uc(istp)=uc(istp)/cgrup(lyup)
         enddo
         if(lyr.le.lys)then
           do istp=1,2
@@ -772,7 +816,7 @@ c
           enddo
         endif
         do istp=3,4
-          uc(istp)=(0.d0,0.d0)
+          y5c(istp)=(0.d0,0.d0)
           do i=1,6
             ypsv(i,istp)=(0.d0,0.d0)
           enddo
@@ -796,15 +840,11 @@ c
           print *,' Warning in qpspropg1: anormal exit from cdgemp!'
           return
         endif
-c
-c       uc = translational motion of earth's centre of mass
-c
         do istp=1,4
-          uc(istp)=(0.d0,0.d0)
+          y5c(istp)=(0.d0,0.d0)
           do j=1,3
-            uc(istp)=uc(istp)+b6(j,istp)*yc(5,j)
+            y5c(istp)=y5c(istp)+b6(j,istp)*yc(5,j)
           enddo
-          uc(istp)=uc(istp)/cgrup(lyup)
         enddo
         if(lyr.le.lys)then
           do istp=1,4
@@ -827,12 +867,15 @@ c
         endif
       endif
 c
-c     transform to motion relative to the centre of mass
+c     since earthquake is internal source,
+c     the reference frame used should be inertial.
+c     non-zero value of y5c is attributed to numerical uncertainties.
 c
       do istp=1,4
-        ypsv(1,istp)=ypsv(1,istp)-uc(istp)
-        ypsv(3,istp)=ypsv(3,istp)-uc(istp)
-        ypsv(5,istp)=ypsv(5,istp)-uc(istp)*cgrup(lyr)
+        ypsv(5,istp)=ypsv(5,istp)
+     &              -y5c(istp)*crrup(lyr)/crrup(1)
+        ypsv(6,istp)=ypsv(6,istp)
+     &              -(3.d0,0.d0)*y5c(istp)/crrup(1)
       enddo
       return
       end

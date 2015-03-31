@@ -8,7 +8,9 @@ c
       double precision t,sr,si
       double precision f(nfmax),y0(nrmax),y(nrmax)
       double complex s
-      double complex swap(2*nfmax),lpf(nfmax)
+      double complex cswap(2*nfmax),lpf(nfmax)
+      double precision dswap(4*nfmax)
+      equivalence (cswap,dswap)
 c
 c      open(39,file='static.dat',status='unknown')
 c      write(39,'(a,$)')'        Lat         Lon'
@@ -29,8 +31,12 @@ c
 c
 c     low-pass filter
 c
-      if(fcorner.gt.0.d0.and.nlpf.gt.0)then
-        call butterworth(nlpf,fcorner,df,nf,lpf)
+      if(nlpf.gt.0)then
+        if(f1corner.le.0.d0)then
+          call butterworth(nlpf,f2corner,df,nf,lpf)
+        else
+          call bandpass(nlpf,f1corner,f2corner,df,nf,lpf)
+        endif
         do lf=1,nf
           do ir=1,nr
             ux(lf,ir)=ux(lf,ir)*lpf(lf)
@@ -50,24 +56,24 @@ c
         do lf=1,nf
           s=dcmplx(-fi,f(lf))
      &     *dcmplx(PI2*tred(ir),0.d0)
-          swap(lf)=ux(lf,ir)*cdexp(s)
+          cswap(lf)=ux(lf,ir)*cdexp(s)
         enddo
         mf=1
         do lf=2*nf,nf+2,-1
           mf=mf+1
-          swap(lf)=dconjg(swap(mf))
+          cswap(lf)=dconjg(cswap(mf))
         enddo
-        swap(nf+1)=(0.d0,0.d0)
+        cswap(nf+1)=(0.d0,0.d0)
 c
 c       convention for Fourier transform:
 c       f(t)=\int F(f) exp(i2\pi f t) df
 c
-        call four1(swap,2*nf,+1)
+        call four1(dswap,2*nf,+1)
         do lf=1,nf
           t=dble(2*lf-2)*dt
-          sr=dreal(swap(2*lf-1))*dexp(-PI2*fi*t)*df
+          sr=dreal(cswap(2*lf-1))*dexp(-PI2*fi*t)*df
           t=dble(2*lf-1)*dt
-          si=dreal(swap(2*lf  ))*dexp(-PI2*fi*t)*df
+          si=dreal(cswap(2*lf  ))*dexp(-PI2*fi*t)*df
           ux(lf,ir)=dcmplx(sr,si)
         enddo
       enddo
@@ -165,24 +171,24 @@ c
         do lf=1,nf
           s=dcmplx(-fi,f(lf))
      &     *dcmplx(PI2*tred(ir),0.d0)
-          swap(lf)=uy(lf,ir)*cdexp(s)
+          cswap(lf)=uy(lf,ir)*cdexp(s)
         enddo
         mf=1
         do lf=2*nf,nf+2,-1
           mf=mf+1
-          swap(lf)=dconjg(swap(mf))
+          cswap(lf)=dconjg(cswap(mf))
         enddo
-        swap(nf+1)=(0.d0,0.d0)
+        cswap(nf+1)=(0.d0,0.d0)
 c
 c       convention for Fourier transform:
 c       f(t)=\int F(f) exp(i2\pi f t) df
 c
-        call four1(swap,2*nf,+1)
+        call four1(dswap,2*nf,+1)
         do lf=1,nf
           t=dble(2*lf-2)*dt
-          sr=dreal(swap(2*lf-1))*dexp(-PI2*fi*t)*df
+          sr=dreal(cswap(2*lf-1))*dexp(-PI2*fi*t)*df
           t=dble(2*lf-1)*dt
-          si=dreal(swap(2*lf)  )*dexp(-PI2*fi*t)*df
+          si=dreal(cswap(2*lf)  )*dexp(-PI2*fi*t)*df
           uy(lf,ir)=dcmplx(sr,si)
         enddo
       enddo
@@ -280,24 +286,24 @@ c
         do lf=1,nf
           s=dcmplx(-fi,f(lf))
      &     *dcmplx(PI2*tred(ir),0.d0)
-          swap(lf)=uz(lf,ir)*cdexp(s)
+          cswap(lf)=uz(lf,ir)*cdexp(s)
         enddo
         mf=1
         do lf=2*nf,nf+2,-1
           mf=mf+1
-          swap(lf)=dconjg(swap(mf))
+          cswap(lf)=dconjg(cswap(mf))
         enddo
-        swap(nf+1)=(0.d0,0.d0)
+        cswap(nf+1)=(0.d0,0.d0)
 c
 c       convention for Fourier transform:
 c       f(t)=\int F(f) exp(i2\pi f t) df
 c
-        call four1(swap,2*nf,+1)
+        call four1(dswap,2*nf,+1)
         do lf=1,nf
           t=dble(2*lf-2)*dt
-          sr=dreal(swap(2*lf-1))*dexp(-PI2*fi*t)*df
+          sr=dreal(cswap(2*lf-1))*dexp(-PI2*fi*t)*df
           t=dble(2*lf-1)*dt
-          si=dreal(swap(2*lf  ))*dexp(-PI2*fi*t)*df
+          si=dreal(cswap(2*lf  ))*dexp(-PI2*fi*t)*df
           uz(lf,ir)=dcmplx(sr,si)
         enddo
       enddo
@@ -395,24 +401,24 @@ c
         do lf=1,nf
           s=dcmplx(-fi,f(lf))
      &     *dcmplx(PI2*tred(ir),0.d0)
-          swap(lf)=us(lf,ir)*cdexp(s)
+          cswap(lf)=us(lf,ir)*cdexp(s)
         enddo
         mf=1
         do lf=2*nf,nf+2,-1
           mf=mf+1
-          swap(lf)=dconjg(swap(mf))
+          cswap(lf)=dconjg(cswap(mf))
         enddo
-        swap(nf+1)=(0.d0,0.d0)
+        cswap(nf+1)=(0.d0,0.d0)
 c
 c       convention for Fourier transform:
 c       f(t)=\int F(f) exp(i2\pi f t) df
 c
-        call four1(swap,2*nf,+1)
+        call four1(dswap,2*nf,+1)
         do lf=1,nf
           t=dble(2*lf-2)*dt
-          sr=dreal(swap(2*lf-1))*dexp(-PI2*fi*t)*df
+          sr=dreal(cswap(2*lf-1))*dexp(-PI2*fi*t)*df
           t=dble(2*lf-1)*dt
-          si=dreal(swap(2*lf  ))*dexp(-PI2*fi*t)*df
+          si=dreal(cswap(2*lf  ))*dexp(-PI2*fi*t)*df
           us(lf,ir)=dcmplx(sr,si)
         enddo
       enddo
@@ -452,24 +458,24 @@ c
         do lf=1,nf
           s=dcmplx(-fi,f(lf))
      &     *dcmplx(PI2*tred(ir),0.d0)
-          swap(lf)=ug(lf,ir)*cdexp(s)
+          cswap(lf)=ug(lf,ir)*cdexp(s)
         enddo
         mf=1
         do lf=2*nf,nf+2,-1
           mf=mf+1
-          swap(lf)=dconjg(swap(mf))
+          cswap(lf)=dconjg(cswap(mf))
         enddo
-        swap(nf+1)=(0.d0,0.d0)
+        cswap(nf+1)=(0.d0,0.d0)
 c
 c       convention for Fourier transform:
 c       f(t)=\int F(f) exp(i2\pi f t) df
 c
-        call four1(swap,2*nf,+1)
+        call four1(dswap,2*nf,+1)
         do lf=1,nf
           t=dble(2*lf-2)*dt
-          sr=dreal(swap(2*lf-1))*dexp(-PI2*fi*t)*df
+          sr=dreal(cswap(2*lf-1))*dexp(-PI2*fi*t)*df
           t=dble(2*lf-1)*dt
-          si=dreal(swap(2*lf  ))*dexp(-PI2*fi*t)*df
+          si=dreal(cswap(2*lf  ))*dexp(-PI2*fi*t)*df
           ug(lf,ir)=dcmplx(sr,si)
         enddo
       enddo
@@ -509,24 +515,24 @@ c
         do lf=1,nf
           s=dcmplx(-fi,f(lf))
      &     *dcmplx(PI2*tred(ir),0.d0)
-          swap(lf)=uv(lf,ir)*cdexp(s)
+          cswap(lf)=uv(lf,ir)*cdexp(s)
         enddo
         mf=1
         do lf=2*nf,nf+2,-1
           mf=mf+1
-          swap(lf)=dconjg(swap(mf))
+          cswap(lf)=dconjg(cswap(mf))
         enddo
-        swap(nf+1)=(0.d0,0.d0)
+        cswap(nf+1)=(0.d0,0.d0)
 c
 c       convention for Fourier transform:
 c       f(t)=\int F(f) exp(i2\pi f t) df
 c
-        call four1(swap,2*nf,+1)
+        call four1(dswap,2*nf,+1)
         do lf=1,nf
           t=dble(2*lf-2)*dt
-          sr=dreal(swap(2*lf-1))*dexp(-PI2*fi*t)*df
+          sr=dreal(cswap(2*lf-1))*dexp(-PI2*fi*t)*df
           t=dble(2*lf-1)*dt
-          si=dreal(swap(2*lf  ))*dexp(-PI2*fi*t)*df
+          si=dreal(cswap(2*lf  ))*dexp(-PI2*fi*t)*df
           uv(lf,ir)=dcmplx(sr,si)
         enddo
       enddo
@@ -566,24 +572,24 @@ c
         do lf=1,nf
           s=dcmplx(-fi,f(lf))
      &     *dcmplx(PI2*tred(ir),0.d0)
-          swap(lf)=uw(lf,ir)*cdexp(s)
+          cswap(lf)=uw(lf,ir)*cdexp(s)
         enddo
         mf=1
         do lf=2*nf,nf+2,-1
           mf=mf+1
-          swap(lf)=dconjg(swap(mf))
+          cswap(lf)=dconjg(cswap(mf))
         enddo
-        swap(nf+1)=(0.d0,0.d0)
+        cswap(nf+1)=(0.d0,0.d0)
 c
 c       convention for Fourier transform:
 c       f(t)=\int F(f) exp(i2\pi f t) df
 c
-        call four1(swap,2*nf,+1)
+        call four1(dswap,2*nf,+1)
         do lf=1,nf
           t=dble(2*lf-2)*dt
-          sr=dreal(swap(2*lf-1))*dexp(-PI2*fi*t)*df
+          sr=dreal(cswap(2*lf-1))*dexp(-PI2*fi*t)*df
           t=dble(2*lf-1)*dt
-          si=dreal(swap(2*lf  ))*dexp(-PI2*fi*t)*df
+          si=dreal(cswap(2*lf  ))*dexp(-PI2*fi*t)*df
           uw(lf,ir)=dcmplx(sr,si)
         enddo
       enddo

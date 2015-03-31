@@ -24,23 +24,30 @@ c===============================================================================
 c
 c     propagation from surface to atmosphere/ocean bottom
 c
-      if(lyr.lt.lyob.and.dreal(comi).le.0.d0)return
-      if(lyob.gt.lyup.and.dreal(comi).gt.0.d0)then
+      if(lyr.lt.lyob.and.cdabs(comi).le.0.d0)return
+      if(lyob.gt.lyup.and.cdabs(comi).gt.0.d0)then
         do j=1,2
           do i=1,4
             yupc(i,j)=(0.d0,0.d0)
           enddo
         enddo
+c
         yupc(1,1)=(1.d0,0.d0)
         yupc(3,2)=(1.d0,0.d0)
+c
         if(lyr.eq.lyup)then
           do j=1,3
             do i=1,6
               y0(i,j)=(0.d0,0.d0)
             enddo
           enddo
-          y0(1,1)=yupc(1,1)
-          y0(5,2)=yupc(3,2)
+          do j=1,2
+            y0(1,j)=yupc(1,j)
+            y0(2,j)=yupc(2,j)
+            y0(3,j)=-yupc(2,j)/(cro(lyup)*comi2*crrup(lyup)**2)
+            y0(5,j)=yupc(3,j)
+            y0(6,j)=yupc(4,j)
+          enddo
         endif
 c
         do ly=lyup,min0(lys-1,lyob-1)
@@ -75,9 +82,9 @@ c
             enddo
           endif
 c
-	      cc1(1,1)=cc1(1,1)*wave(1)*wave(2)
- 	      cc1(2,1)=(1.d0,0.d0)
-	      cc1(3,1)=cc1(3,1)*wave(3)*wave(2)
+          cc1(1,1)=cc1(1,1)*wave(1)*wave(2)
+          cc1(2,1)=(1.d0,0.d0)
+          cc1(3,1)=cc1(3,1)*wave(3)*wave(2)
           cc1(4,1)=(0.d0,0.d0)
 c
           cc1(1,2)=cc1(1,2)*wave(1)*wave(4)
@@ -91,7 +98,7 @@ c
             do j=1,2
               y0(1,j)=yupc(1,j)
               y0(2,j)=yupc(2,j)
-              y0(3,j)=-yupc(2,j)/(crolw(ly)*comi2*crrlw(ly)**2)
+              y0(3,j)=-yupc(2,j)/(cro(ly)*comi2*crrlw(ly)**2)
               y0(4,j)=(0.d0,0.d0)
               y0(5,j)=yupc(3,j)
               y0(6,j)=yupc(4,j)
@@ -102,11 +109,11 @@ c
           endif
         enddo
 c
-        ly=min0(lys-1,lyob-1)
+        ly=min0(lyob-1,lys-1)
         do j=1,2
           yup(1,j)=yupc(1,j)
           yup(2,j)=yupc(2,j)
-          yup(3,j)=-yupc(2,j)/(crolw(ly)*comi2*crrlw(ly)**2)
+          yup(3,j)=(0.d0,0.d0)
           yup(4,j)=(0.d0,0.d0)
           yup(5,j)=yupc(3,j)
           yup(6,j)=yupc(4,j)
@@ -351,7 +358,7 @@ c
           do j=1,2
             y0(1,j)=ylwc(1,j)
             y0(2,j)=ylwc(2,j)
-            y0(3,j)=(0.d0,0.d0)
+            y0(3,j)=-ylwc(2,j)/(cro(lylw)*comi2*crrup(lylw)**2)
             y0(4,j)=(0.d0,0.d0)
             y0(5,j)=ylwc(3,j)
             y0(6,j)=ylwc(4,j)
@@ -409,11 +416,7 @@ c
           do j=1,2
             y0(1,j)=ylwc(1,j)
             y0(2,j)=ylwc(2,j)
-            if(cdabs(comi2).gt.0.d0)then
-              y0(3,j)=-ylwc(2,j)/(croup(ly)*comi2*crrup(ly)**2)
-            else
-              y0(3,j)=(0.d0,0.d0)
-            endif
+            y0(3,j)=-ylwc(2,j)/(cro(ly)*comi2*crrup(ly)**2)
             y0(4,j)=(0.d0,0.d0)
             y0(5,j)=ylwc(3,j)
             y0(6,j)=ylwc(4,j)
@@ -435,11 +438,7 @@ c
         do j=1,2
           ylw(1,j)=ylwc(1,j)
           ylw(2,j)=ylwc(2,j)
-          if(cdabs(comi2).gt.0.d0)then
-            ylw(3,j)=-ylwc(2,j)/(croup(lycm)*comi2*crrup(lycm)**2)
-          else
-            ylw(3,j)=(0.d0,0.d0)
-          endif
+          ylw(3,j)=(0.d0,0.d0)
           ylw(4,j)=(0.d0,0.d0)
           ylw(5,j)=ylwc(3,j)
           ylw(6,j)=ylwc(4,j)
@@ -590,11 +589,7 @@ c
           do j=1,2
             y0(1,j)=ylwc(1,j)
             y0(2,j)=ylwc(2,j)
-            if(cdabs(comi2).gt.0.d0)then
-              y0(3,j)=-ylwc(2,j)/(croup(lylw)*comi2*crrup(lylw)**2)
-            else
-              y0(3,j)=(0.d0,0.d0)
-            endif
+            y0(3,j)=-ylwc(2,j)/(cro(lylw)*comi2*crrup(lylw)**2)
             y0(4,j)=(0.d0,0.d0)
             y0(5,j)=ylwc(3,j)
             y0(6,j)=ylwc(4,j)
@@ -652,11 +647,7 @@ c
           do j=1,2
             y0(1,j)=ylwc(1,j)
             y0(2,j)=ylwc(2,j)
-            if(cdabs(comi2).gt.0.d0)then
-              y0(3,j)=-ylwc(2,j)/(croup(ly)*comi2*crrup(ly)**2)
-            else
-              y0(3,j)=(0.d0,0.d0)
-            endif
+            y0(3,j)=-ylwc(2,j)/(cro(ly)*comi2*crrup(ly)**2)
             y0(4,j)=(0.d0,0.d0)
             y0(5,j)=ylwc(3,j)
             y0(6,j)=ylwc(4,j)
@@ -670,11 +661,7 @@ c
         do j=1,2
           ylw(1,j)=ylwc(1,j)
           ylw(2,j)=ylwc(2,j)
-          if(cdabs(comi2).gt.0.d0)then
-            ylw(3,j)=-ylwc(2,j)/(croup(lys)*comi2*crrup(lys)**2)
-          else
-            ylw(3,j)=(0.d0,0.d0)
-          endif
+          ylw(3,j)=-ylwc(2,j)/(cro(lys)*comi2*crrup(lys)**2)
           ylw(4,j)=(0.d0,0.d0)
           ylw(5,j)=ylwc(3,j)
           ylw(6,j)=ylwc(4,j)

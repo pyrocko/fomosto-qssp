@@ -14,6 +14,7 @@ c
       double precision f0(nsmax,nrmax)
       double complex cp0,cp1,cp2,wavelet
       double complex cfac,ca,cb,dur,dut,dup,dus,dug,duv,duw
+      double complex wvf(nfmax,nsmax)
       double complex expl(nsmax),clvd(nsmax),ss12(nsmax)
       double complex ss11(nsmax),ds31(nsmax),ds23(nsmax)
 c
@@ -30,7 +31,11 @@ c
             lys=ly
           endif
         enddo
-        slws=dmin1(slwupcut,slwmax)*REARTH
+        if(slwupcut.gt.0.d0)then
+          slws=dmin1(slwupcut,slwmax)*REARTH
+        else
+          slws=slwmax*REARTH
+        endif
         do ir=1,nr
           call disazi(1.d0,lats(is),lons(is),
      &                     latr(ir),lonr(ir),rn,re)
@@ -43,7 +48,7 @@ c
             slwr=slws
           endif
 c
-          if(slwr.ge.slws)then
+          if(slwr.ge.slws.or.slwupcut.le.0.d0)then
             ldf(is,ir)=0.d0
             idr(is,ir)=0
           else
@@ -105,6 +110,10 @@ c
       enddo
 c
 c     initiation
+c
+      do is=1,ns
+        call swavelet(trss(is),df,nf,wvf(1,is))
+      enddo
 c
       do lf=1,nf
         do ir=1,nr
@@ -336,7 +345,7 @@ c
 c
           do is=isg1(ig),isg2(ig)
 
-            wavelet=(1.d0,0.d0)/dcmplx(1.d0,pi2*f*trss(is))**2
+            wavelet=wvf(lf,is)
      &             *cdexp(-dcmplx(-fi,f)*dcmplx(PI2*togs(is),0.d0))
             do ir=1,nr
               id=idr(is,ir)

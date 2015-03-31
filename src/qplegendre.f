@@ -1,6 +1,6 @@
-      subroutine qplegendre(ldegcut,raddis)
+      subroutine qplegendre(ldeg,raddis)
       implicit none
-      integer ldegcut
+      integer ldeg
       double precision raddis
 c
       include 'qpglobal.h'
@@ -20,7 +20,7 @@ c
       plm(2,2)=3.d0
       do m=0,2
         plm(m+1,m)=dble(2*m+1)*x*plm(m,m)
-        do l=m+2,ldegcut
+        do l=m+2,ldeg
           plm(l,m)=(dble(2*l-1)*x*plm(l-1,m)
      &             -dble(l+m-1)*plm(l-2,m))/dble(l-m)
         enddo

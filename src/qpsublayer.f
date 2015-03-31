@@ -7,8 +7,10 @@ c
 c	work space
 c
 	integer i,j,i0,l,ly,ig,di0
-      double precision h,dh,z,zz,wvlength,up,lw,uplw4
-	double precision rrs,rrr,dvp,dvs,ro1,dro,dqp,dqs,mass
+      double precision h,dh,z,zz,wvlength,up,lw,uplw4,alfa,beta
+	double precision rrs,rrr,dvp,dvs,ro1,dro,dqp,dqs,mass,gr0
+      double precision bvn2
+      logical atmo
 c
 	ly0=0
 c
@@ -26,13 +28,23 @@ c
         else
           dvs=0.d0
         endif
-        dro=2.d0*dabs(dlog(ro0lw(l))-dlog(ro0up(l)))
-     &     /(dlog(ro0lw(l))+dlog(ro0up(l)))
-	  i0=1+idint(dmax1(dvp/RESOLUT,dvs/RESOLUT,dro/RESOLUT))
+        if(dp0lw(l).le.depatmos)then
+          atmo=.true.
+          dro=2.d0*dabs(dlog(ro0lw(l))-dlog(ro0up(l)))
+     &       /(dlog(ro0lw(l))+dlog(ro0up(l)))
+        else
+          atmo=.false.
+          dro=2.d0*dabs(ro0lw(l)-ro0up(l))/(ro0lw(l)+ro0up(l))
+        endif
+        i0=1+idint(dmax1(dvp/RESOLUT,dvs/RESOLUT,dro/RESOLUT))
         i0=min0(i0,1+idint(4.d0*h/wvlength))
         dvp=(vp0lw(l)-vp0up(l))/h
 	  dvs=(vs0lw(l)-vs0up(l))/h
-	  dro=(dlog(ro0lw(l))-dlog(ro0up(l)))/h
+        if(atmo)then
+	    dro=(dlog(ro0lw(l))-dlog(ro0up(l)))/h
+        else
+          dro=(ro0lw(l)-ro0up(l))/h
+        endif
 	  dqp=(qp0lw(l)-qp0up(l))/h
 	  dqs=(qs0lw(l)-qs0up(l))/h
 	  dh=h/dble(i0)
@@ -45,14 +57,22 @@ c
 	    rrup(ly0)=rratmos-(zz+z)
 	    vpup(ly0)=vp0up(l)+dvp*z
 	    vsup(ly0)=vs0up(l)+dvs*z
-	    roup(ly0)=ro0up(l)*dexp(dro*z)
+          if(atmo)then
+	      roup(ly0)=ro0up(l)*dexp(dro*z)
+          else
+            roup(ly0)=ro0up(l)+dro*z
+          endif
 	    qpup(ly0)=qp0up(l)+dqp*z
 	    qsup(ly0)=qs0up(l)+dqs*z
           z=z+dh
 	    rrlw(ly0)=rratmos-(zz+z)
 	    vplw(ly0)=vp0up(l)+dvp*z
 	    vslw(ly0)=vs0up(l)+dvs*z
-	    rolw(ly0)=ro0up(l)*dexp(dro*z)
+          if(atmo)then
+	      rolw(ly0)=ro0up(l)*dexp(dro*z)
+          else
+            rolw(ly0)=ro0up(l)+dro*z
+          endif
 	    qplw(ly0)=qp0up(l)+dqp*z
 	    qslw(ly0)=qs0up(l)+dqs*z
 	  enddo
@@ -94,7 +114,12 @@ c
           rrlw(lys-1)=rrs
 	    vplw(lys-1)=up*vpup(lys-1)+lw*vplw(lys)
 	    vslw(lys-1)=up*vsup(lys-1)+lw*vslw(lys)
-	    rolw(lys-1)=up*roup(lys-1)+lw*rolw(lys)
+          if(rrs.gt.REARTH)then
+            rolw(lys-1)=rolw(lys-1)
+     &                 *dexp(dlog(roup(lys-1)/rolw(lys-1))*up)
+          else
+	      rolw(lys-1)=up*roup(lys-1)+lw*rolw(lys)
+          endif
 	    qplw(lys-1)=up*qpup(lys-1)+lw*qplw(lys)
 	    qslw(lys-1)=up*qsup(lys-1)+lw*qslw(lys)
           rrup(lys)=rrs
@@ -141,7 +166,11 @@ c
         rrlw(lyr-1)=rrr
 	  vplw(lyr-1)=up*vpup(lyr-1)+lw*vplw(lyr)
 	  vslw(lyr-1)=up*vsup(lyr-1)+lw*vslw(lyr)
-	  rolw(lyr-1)=up*roup(lyr-1)+lw*rolw(lyr)
+        if(rrr.gt.REARTH)then
+          rolw(lyr-1)=rolw(lyr-1)*dexp(dlog(roup(lyr-1)/rolw(lyr-1))*up)
+        else
+	    rolw(lyr-1)=up*roup(lyr-1)+lw*rolw(lyr)
+        endif
 	  qplw(lyr-1)=up*qpup(lyr-1)+lw*qplw(lyr)
 	  qslw(lyr-1)=up*qsup(lyr-1)+lw*qslw(lyr)
         rrup(lyr)=rrr
@@ -165,8 +194,8 @@ c
           endif
         enddo
 301     continue
-        do ly=2,lyob-1
-          if(roup(ly)-rolw(ly-1).gt.rolw(ly-1))then
+        do ly=lyob,2,-1
+          if(roup(ly)-rolw(ly-1).gt.10.d0*rolw(ly-1))then
             lyos=ly
             goto 302
           endif
@@ -211,30 +240,91 @@ c
           endif
         enddo
 700     continue
-c        if(lygrn(ig).le.lyob.or.lygrn(ig).ge.lycm)then
-c          stop ' Source in a liquid layer!'
-c        endif
       enddo
 c
       mass=0.d0
       do ly=ly0,1,-1
-        dro=(roup(ly)-rolw(ly))/(rrup(ly)-rrlw(ly))
-        ro1=rolw(ly)-dro*rrlw(ly) 
-        mass=mass+PI*(rrup(ly)-rrlw(ly))*((4.d0/3.d0)*ro1
-     &      *(rrup(ly)**2+rrup(ly)*rrlw(ly)+rrlw(ly)**2)
-     &      +dro*(rrup(ly)**3+rrup(ly)**2*rrlw(ly)
-     &      +rrup(ly)*rrlw(ly)**2+rrlw(ly)**3))
+        if(ly.ge.lyos)then
+          dro=(roup(ly)-rolw(ly))/(rrup(ly)-rrlw(ly))
+          ro1=rolw(ly)-dro*rrlw(ly) 
+          mass=mass+PI*(rrup(ly)-rrlw(ly))*((4.d0/3.d0)*ro1
+     &        *(rrup(ly)**2+rrup(ly)*rrlw(ly)+rrlw(ly)**2)
+     &        +dro*(rrup(ly)**3+rrup(ly)**2*rrlw(ly)
+     &        +rrup(ly)*rrlw(ly)**2+rrlw(ly)**3))
+        else
+          alfa=dlog(roup(ly)/rolw(ly))/(rrup(ly)-rrlw(ly))
+          mass=mass+2.d0*PI2/alfa**3
+     &        *(roup(ly)*(alfa*rrup(ly)*(alfa*rrup(ly)-2.d0)+2.d0)
+     &         -rolw(ly)*(alfa*rrlw(ly)*(alfa*rrlw(ly)-2.d0)+2.d0))
+        endif
         cgrup(ly)=dcmplx(BIGG*mass/rrup(ly)**2,0.d0)
       enddo
-      freeairgrd=-dreal(cgrup(lyr))*2.d0/rrup(lyr)
-      if(lyr.gt.1)then
-        freeairgrd=freeairgrd+4.d0*PI*BIGG*rolw(lyr-1)
-      endif
 c
       do ly=1,ly0-1
         cgrlw(ly)=cgrup(ly+1)
       enddo
       cgrlw(ly0)=(0.d0,0.d0)
+c
+c     make Adam-Williamson condition satisfied in ocean
+c
+      i=0
+      gr0=dreal(cgrup(1))
+800   i=i+1
+      do ly=lyos,lyob-1
+        h=rrup(ly)-rrlw(ly)
+        alfa=dreal(cgrup(ly))/vpup(ly)**2
+        beta=(dreal(cgrlw(ly))/vplw(ly)**2
+     &       -dreal(cgrup(ly))/vpup(ly)**2)/h
+        rolw(ly)=roup(ly)*dexp(alfa*h+beta*h**2)
+        if(ly.lt.lyob-1)roup(ly+1)=rolw(ly)
+      enddo
+      mass=0.d0
+      do ly=ly0,1,-1
+        if(ly.ge.lyos)then
+          dro=(roup(ly)-rolw(ly))/(rrup(ly)-rrlw(ly))
+          ro1=rolw(ly)-dro*rrlw(ly) 
+          mass=mass+PI*(rrup(ly)-rrlw(ly))*((4.d0/3.d0)*ro1
+     &        *(rrup(ly)**2+rrup(ly)*rrlw(ly)+rrlw(ly)**2)
+     &        +dro*(rrup(ly)**3+rrup(ly)**2*rrlw(ly)
+     &        +rrup(ly)*rrlw(ly)**2+rrlw(ly)**3))
+        else
+          alfa=dlog(roup(ly)/rolw(ly))/(rrup(ly)-rrlw(ly))
+          mass=mass+2.d0*PI2/alfa**3
+     &        *(roup(ly)*(alfa*rrup(ly)*(alfa*rrup(ly)-2.d0)+2.d0)
+     &         -rolw(ly)*(alfa*rrlw(ly)*(alfa*rrlw(ly)-2.d0)+2.d0))
+        endif
+        cgrup(ly)=dcmplx(BIGG*mass/rrup(ly)**2,0.d0)
+      enddo
+      do ly=1,ly0-1
+        cgrlw(ly)=cgrup(ly+1)
+      enddo
+      cgrlw(ly0)=(0.d0,0.d0)
+      if(dabs(dreal(cgrup(1))-gr0).gt.1.0d-08*dreal(cgrup(1))
+     &  .and.i.le.10)then
+        gr0=dreal(cgrup(1))
+        goto 800
+      endif
+c
+      freeairgrd=-dreal(cgrup(lyr))*2.d0/rrup(lyr)
+      if(lyr.gt.1)then
+        freeairgrd=freeairgrd+4.d0*PI*BIGG*rolw(lyr-1)
+      endif
+c
+c     for a stable atmposheric density grandient
+c
+      do ly=1,lyos-1
+        beta=dlog(roup(ly)/rolw(ly))/(rrup(ly)-rrlw(ly))
+        gr0=dreal(cgrup(ly))
+        bvn2=-gr0*(beta+gr0/vpup(ly)**2)
+        if(bvn2.lt.0.d0)vpup(ly)=dsqrt(-gr0/beta)
+        gr0=dreal(cgrlw(ly))
+        bvn2=-gr0*(beta+gr0/vplw(ly)**2)
+        if(bvn2.lt.0.d0)vplw(ly)=dsqrt(-gr0/beta)
+      enddo
+      do ly=2,lyos-1
+        vpup(ly)=dmax1(vpup(ly),vplw(ly-1))
+        vplw(ly-1)=vpup(ly)
+      enddo
 c
 	write(*,'(9a)')'  No','      R(km)','   Vp(km/s)',
      &    '   Vs(km/s)',' Ro(g/cm^3)','      Qp',
@@ -257,7 +347,7 @@ c
         endif
 	  write(*,1002)rrlw(ly)/1.d3,vplw(ly)/1.d3,vslw(ly)/1.d3,
      &             rolw(ly)/1.d3,qplw(ly),qslw(ly),dreal(cgrlw(ly))
-	enddo
+      enddo
 c
       do ly=1,ly0
         crrup(ly)=dcmplx(rrup(ly),0.d0)
@@ -276,7 +366,25 @@ c
         cmulw(ly)=dcmplx(rolw(ly)*vslw(ly)**2,0.d0)
         cgalw(ly)=dcmplx(2.d0*PI2*BIGG*rolw(ly),0.d0)
 c
-        cro(ly)=dcmplx(dsqrt(roup(ly)*rolw(ly)),0.d0)
+        if(rrup(ly).le.rrlw(ly))then
+          cro(ly)=(0.5d0,0.d0)*(croup(ly)+crolw(ly))
+        else
+          if(ly.ge.lyos)then
+            dro=(roup(ly)-rolw(ly))/(rrup(ly)-rrlw(ly))
+            ro1=rolw(ly)-dro*rrlw(ly) 
+            mass=PI*(rrup(ly)-rrlw(ly))*((4.d0/3.d0)*ro1
+     &          *(rrup(ly)**2+rrup(ly)*rrlw(ly)+rrlw(ly)**2)
+     &          +dro*(rrup(ly)**3+rrup(ly)**2*rrlw(ly)
+     &          +rrup(ly)*rrlw(ly)**2+rrlw(ly)**3))
+          else
+            alfa=dlog(roup(ly)/rolw(ly))/(rrup(ly)-rrlw(ly))
+            mass=2.d0*PI2/alfa**3
+     &          *(roup(ly)*(alfa*rrup(ly)*(alfa*rrup(ly)-2.d0)+2.d0)
+     &           -rolw(ly)*(alfa*rrlw(ly)*(alfa*rrlw(ly)-2.d0)+2.d0))
+          endif
+          cro(ly)=dcmplx(mass/((rrup(ly)**3-rrlw(ly)**3)
+     &                        *2.d0*PI2/3.d0),0.d0)
+        endif
         cla(ly)=(0.5d0,0.d0)*(claup(ly)+clalw(ly))
         cmu(ly)=(0.5d0,0.d0)*(cmuup(ly)+cmulw(ly))
         cvp(ly)=(0.5d0,0.d0)*(cvpup(ly)+cvplw(ly))
@@ -285,19 +393,9 @@ c
         cga(ly)=(0.5d0,0.d0)*(cgaup(ly)+cgalw(ly))
       enddo
 c
-      mmantle=0.d0
-      do ly=lyob,lycm-1
-        ro1=0.5d0*(roup(ly)+rolw(ly))
-        uplw4=rrup(ly)**4+rrup(ly)**3*rrlw(ly)
-     &       +rrup(ly)**2*rrlw(ly)**2+rrup(ly)*rrlw(ly)**3
-     &       +rrlw(ly)**4
-        mshell(ly)=ro1*(rrup(ly)-rrlw(ly))*uplw4*8.d0*PI/15.d0
-        mmantle=mmantle+mshell(ly)
-      enddo
-c
       do ly=1,lyob-1
         cypnorm(1,ly)=(1.d0,0.d0)
-        cypnorm(2,ly)=cla(ly)
+        cypnorm(2,ly)=(1.d0,0.d0)
         cypnorm(3,ly)=cga(ly)
         cypnorm(4,ly)=cga(ly)
       enddo
@@ -311,7 +409,7 @@ c
       enddo
       do ly=lycm,lycc-1
         cypnorm(1,ly)=(1.d0,0.d0)
-        cypnorm(2,ly)=cla(ly)
+        cypnorm(2,ly)=(1.d0,0.d0)
         cypnorm(3,ly)=cga(ly)
         cypnorm(4,ly)=cga(ly)
       enddo

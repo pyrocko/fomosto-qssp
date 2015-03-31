@@ -17,7 +17,7 @@ c
       double complex y0(6,3),c(2)
       double complex yup(6,3),ylw(6,3),yupc(4,2),ylwc(4,2)
       double complex coef6(6,6),b6(6,4),coef4(4,4),b4(4,2)
-      external qpdifmat4,qpdifmat6
+      external qpdifmatl,qpdifmats
 c
       double complex c3
       data c3/(3.d0,0.d0)/
@@ -33,11 +33,11 @@ c
           enddo
         enddo
 c
-        yupc(1,1)=comi2*crrup(lyup)
-        yupc(2,1)=cgrup(lyup)
+        yupc(1,1)=comi2*crrup(lyup)/cgrup(lyup)
+        yupc(2,1)=(1.d0,0.d0)
 c
-        yupc(2,2)=(1.d0,0.d0)
-        yupc(3,2)=-comi2
+        yupc(1,2)=(1.d0,0.d0)
+        yupc(3,2)=cgrup(lyup)/crrup(lyup)
 c
         if(lyr.eq.lyup)then
           do j=1,3
@@ -45,17 +45,19 @@ c
               y0(i,j)=(0.d0,0.d0)
             enddo
           enddo
-c
-          y0(1,1)=yupc(1,1)
-          y0(3,1)=yupc(2,1)
-c
-          y0(3,2)=yupc(2,2)
-          y0(5,2)=yupc(3,2)
-c
+          do j=1,2
+            y0(1,j)=yupc(1,j)
+            y0(2,j)=croup(lyup)*crrup(lyup)**2
+     &              *(yupc(1,j)*cgrup(lyup)/crrup(lyup)
+     &              -comi2*yupc(2,j)-yupc(3,j))
+            y0(3,j)=yupc(2,j)
+            y0(5,j)=yupc(3,j)
+            y0(6,j)=yupc(4,j)
+          enddo
         endif
 c
         do ly=lyup,min0(lys-1,lyob-1)
-          if(ly.gt.lyup.and.ly.eq.lyos)then
+          if(lyup.lt.lyos.and.lyob.gt.lyos.and.ly.eq.lyos)then
 c
 c           interface ocean-atmosphere
 c
@@ -140,7 +142,7 @@ c
             enddo
           endif
 c
-          call ruku(yupc,4,2,ly,ldeg,qpdifmat4,rrup(ly),rrlw(ly))
+          call ruku(yupc,4,2,ly,ldeg,qpdifmatl,rrup(ly),rrlw(ly))
           if(ly.eq.lyr-1)then
             do j=1,3
               do i=1,6
@@ -266,7 +268,7 @@ c
           enddo
         endif
 c
-        call ruku(yup,6,3,ly,ldeg,qpdifmat6,rrup(ly),rrlw(ly))
+        call ruku(yup,6,3,ly,ldeg,qpdifmats,rrup(ly),rrlw(ly))
         if(ly.eq.lyr-1)call cmemcpy(yup,y0,18)
       enddo
 c
@@ -287,7 +289,8 @@ c
 c
 c       lowest layer is within inner core
 c
-        call qpstart6(ldeg,lylw,ylw)
+        call qpstart6(1,lylw,ylw)
+c
         if(lylw.eq.lyr.and.lylw.gt.lys)then
           call cmemcpy(ylw,y0,18)
         endif
@@ -364,7 +367,7 @@ c
           enddo
         endif
 c
-        call ruku(ylw,6,3,ly,ldeg,qpdifmat6,rrlw(ly),rrup(ly))
+        call ruku(ylw,6,3,ly,ldeg,qpdifmats,rrlw(ly),rrup(ly))
         if(ly.eq.lyr.and.ly.gt.lys)call cmemcpy(ylw,y0,18)
       enddo
 c
@@ -410,7 +413,7 @@ c
           enddo
         endif
 c
-c       y2 = Ur
+c       y2 = Ut
 c
         do j=1,2
           c(j)=-ylwc(2,j)/crolw(lycc-1)/crrlw(lycc-1)**2
@@ -434,28 +437,7 @@ c
 c
 c       lowest layer is within the liquid core
 c
-        if(cdabs(comi).gt.0.d0)then
-c
-c         compressible liquid for dynamic response
-c
-          call qpstart4(ldeg,lylw,ylwc)
-        else
-c
-c         incompressible liquid used for static response
-c
-          do j=1,2
-            do i=1,4
-              ylwc(i,j)=(0.d0,0.d0)
-            enddo
-          enddo
-c
-          ylwc(3,1)=(1.d0,0.d0)
-          ylwc(4,1)=dcmplx(dble(2*ldeg+1),0.d0)
-c
-          ylwc(1,2)=dcmplx(dble(ldeg),0.d0)
-          ylwc(2,2)=(1.d0,0.d0)
-          ylwc(4,2)=-dcmplx(dble(ldeg),0.d0)*cgaup(lylw)
-        endif
+        call qpstart4(1,lylw,ylwc)
 c
         if(lylw.eq.lyr.and.lylw.gt.lys)then
           do j=1,3
@@ -517,7 +499,7 @@ c
           enddo
         endif
 c
-        call ruku(ylwc,4,2,ly,ldeg,qpdifmat4,rrlw(ly),rrup(ly))
+        call ruku(ylwc,4,2,ly,ldeg,qpdifmatl,rrlw(ly),rrup(ly))
         if(ly.eq.lyr.and.ly.gt.lys)then
           do j=1,3
             do i=1,6
@@ -568,7 +550,7 @@ c
 c
 c       lowest layer is within the mantle
 c
-        call qpstart6(ldeg,lylw,ylw)
+        call qpstart6(1,lylw,ylw)
         if(lylw.eq.lyr.and.lylw.gt.lys)then
           call cmemcpy(ylw,y0,18)
         endif
@@ -645,7 +627,7 @@ c
           enddo
         endif
 c
-        call ruku(ylw,6,3,ly,ldeg,qpdifmat6,rrlw(ly),rrup(ly))
+        call ruku(ylw,6,3,ly,ldeg,qpdifmats,rrlw(ly),rrup(ly))
         if(ly.eq.lyr.and.ly.gt.lys)call cmemcpy(ylw,y0,18)
       enddo
 c
@@ -691,7 +673,7 @@ c
           enddo
         endif
 c
-c       y2 => Ut
+c       y2 = Ut
 c
         do j=1,2
           c(j)=-ylwc(2,j)/crolw(lyob-1)/crrlw(lyob-1)**2
@@ -715,28 +697,7 @@ c
 c
 c       lowest layer is within the atmosphere
 c
-        if(cdabs(comi).gt.0.d0)then
-c
-c         compressible liquid for dynamic response
-c
-          call qpstart4(ldeg,lylw,ylwc)
-        else
-c
-c         incompressible liquid used for static response
-c
-          do j=1,2
-            do i=1,4
-              ylwc(i,j)=(0.d0,0.d0)
-            enddo
-          enddo
-c
-          ylwc(3,1)=(1.d0,0.d0)
-          ylwc(4,1)=dcmplx(dble(2*ldeg+1),0.d0)
-c
-          ylwc(1,2)=dcmplx(dble(ldeg),0.d0)
-          ylwc(2,2)=(1.d0,0.d0)
-          ylwc(4,2)=-dcmplx(dble(ldeg),0.d0)*cgaup(lylw)
-        endif
+        call qpstart4(1,lylw,ylwc)
 c
         if(lylw.eq.lyr.and.lylw.gt.lys)then
           do j=1,3
@@ -757,7 +718,7 @@ c
       endif
 c
       do ly=min0(lylw-1,lyob-1),lys,-1
-        if(ly.eq.lyos-1)then
+        if(lyob.gt.lyos.and.ly.eq.lyos-1)then
 c
 c         interface ocean-atmosphere
 c
@@ -842,7 +803,7 @@ c
           enddo
         endif
 c
-        call ruku(ylwc,4,2,ly,ldeg,qpdifmat4,rrlw(ly),rrup(ly))
+        call ruku(ylwc,4,2,ly,ldeg,qpdifmatl,rrlw(ly),rrup(ly))
         if(ly.eq.lyr.and.ly.gt.lys)then
           do j=1,3
             do i=1,6
