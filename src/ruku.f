@@ -5,11 +5,12 @@
       double complex y(i0,j0)
       external difmat
 c
-      integer nrrmax,nrrmin,nrrmid
-      parameter(nrrmax=16384,nrrmin=2,nrrmid=512)
+      integer nrrmax,nrrmin
+      parameter(nrrmax=16384,nrrmin=8)
 c
       integer i,j,k,irr,nrr
       double precision rr,drr
+      double precision yabs(6,3)
       double complex cdrr,ra
       double complex y0(6,3),y1(6,3),y2(6,3),ya(6,3),yb(6,3)
       double complex yk(6,4),mat(6,6,3)
@@ -25,6 +26,7 @@ c
           y1(i,j)=(0.d0,0.d0)
           y2(i,j)=y(i,j)
           yb(i,j)=y(i,j)
+          yabs(i,j)=cdabs(y2(i,j))
         enddo
       enddo
       nrr=1
@@ -75,33 +77,29 @@ c
 c
           do i=1,i0
             y2(i,j)=y2(i,j)+(yk(i,1)+c2*(yk(i,2)+yk(i,3))+yk(i,4))/c6
+            yabs(i,j)=dmax1(yabs(i,j),cdabs(y2(i,j)))
           enddo
         enddo
       enddo
 c
-      if(nrr.le.nrrmid)then
-        again=nrr.lt.nrrmin
-        do j=1,j0
-          do i=1,i0
-            yb(i,j)=y2(i,j)
-            if(cdabs(yb(i,j)-ya(i,j)).gt.eps*cdabs(yb(i,j)))again=.true.
-          enddo
+      do j=1,j0
+        do i=1,i0
+          yb(i,j)=y2(i,j)
         enddo
-      else if(nrr.le.nrrmax)then
+      enddo
+c
+      if(nrr.le.nrrmin)then
+        again=.true.
+      else if(nrr.lt.nrrmax)then
         again=.false.
         do j=1,j0
           do i=1,i0
-            ra=c2*y1(i,j)-y0(i,j)-y2(i,j)
-            if(cdabs(ra).gt.eps*cdabs(y2(i,j)))then
-              yb(i,j)=y1(i,j)+(y2(i,j)-y1(i,j))*(y1(i,j)-y0(i,j))/ra
-            else
-              yb(i,j)=y2(i,j)
-            endif
-            if(cdabs(yb(i,j)-ya(i,j)).gt.eps*cdabs(yb(i,j)))again=.true.
+            if(cdabs(yb(i,j)-ya(i,j)).gt.eps*yabs(i,j))again=.true.
           enddo
         enddo
       else
         print *, ' Warning in ruku: Convergence problem!'
+        again=.false.
       endif
       if(again)then
         nrr=2*nrr

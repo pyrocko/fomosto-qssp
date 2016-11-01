@@ -362,6 +362,17 @@ c
           depatmos=-KM2M*dp0(1)
           rratmos=REARTH+depatmos
         endif
+        if(i.eq.l.and.KM2M*dp0(i).ne.REARTH)then
+          if(KM2M*dp0(i).gt.1.001d0*REARTH)then
+            stop ' Error: earth radius larger than pre-defined!'
+          else if(KM2M*dp0(i).lt.0.999d0*REARTH)then
+            stop ' Error: earth radius smaller than pre-defined!'
+          else
+            print *,' Warning: earth radius changed to pre-defined!'
+            dp0(i)=REARTH/KM2M
+          endif
+        endif
+c
         dp0(i)=KM2M*dp0(i)+depatmos
         vp0(i)=KM2M*vp0(i)
         vs0(i)=KM2M*vs0(i)
