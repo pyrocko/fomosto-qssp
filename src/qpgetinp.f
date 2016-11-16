@@ -261,12 +261,11 @@ c
       read(unit,*)nlpf,f1corner,f2corner
       call skip_comments(unit)
       read(unit,*)slwlwcut,slwupcut
-      if(slwlwcut.gt.slwupcut)then
+      slwlwcut=slwlwcut/KM2M
+      slwupcut=slwupcut/KM2M
+      if(slwupcut.gt.slwmax.or.slwlwcut.ge.slwupcut)then
         slwlwcut=0.d0
         slwupcut=slwmax
-      else
-        slwlwcut=slwlwcut/KM2M
-        slwupcut=slwupcut/KM2M
       endif
       call skip_comments(unit)
       read(unit,*)nr

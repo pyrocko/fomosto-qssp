@@ -9,11 +9,11 @@ c
       double precision PI
       data PI/3.14159265358979d0/
 c
-      do l=0,ldeg(1)
+      do l=0,ldeg(1)-1
         tap(l)=0.d0
       enddo
       fac=0.5d0*PI/dble(1+ldeg(2)-ldeg(1))
-      do l=ldeg(1)+1,ldeg(2)
+      do l=ldeg(1),ldeg(2)-1
         tap(l)=dsin(fac*dble(l-ldeg(1)))**2
       enddo
       do l=ldeg(2),ldeg(3)

@@ -25,9 +25,9 @@ c     nfmax: max. number of frequency samples
 c     ldegmax: max. degree of Legendre polynomials
 c
       integer lymax,nrmax,nsmax,ngrnmax,nfmax,ldegmax,ndmax
-      parameter(nrmax=51,nsmax=500,ngrnmax=50)
-      parameter(nfmax=8192,ldegmax=20000)
-      parameter(lymax=250+ngrnmax)
+      parameter(nrmax=91,nsmax=500,ngrnmax=50)
+      parameter(nfmax=16384,ldegmax=25000)
+      parameter(lymax=150+ngrnmax)
       parameter(ndmax=4)
 c
 c     GREEN FUNCTION PARAMETERS

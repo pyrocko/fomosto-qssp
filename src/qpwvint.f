@@ -4,63 +4,43 @@
 c
       include 'qpglobal.h'
 c
-      integer i,id,is,ir,ig,nd,nt0,nf0,ntcut0,nfcut0,ly,ishift
-      integer lf,lf1,istp,ldeg,ldeg0,ldegf,ldegf0
+      integer i,id,is,ir,ig,nd,nt0,nf0,ntcut0,nfcut0,ishift
+      integer lf,lf1,istp,ldeg,ldegf
       integer istat,ldegup,ldeglw,ldegneed
       integer ldegtap(4,nsmax,nrmax)
-      double precision depsarc,rrs,slws,slwr,twin,anorm
-      double precision f,dt0,df0,rn,re,azi,bazi,bazi0,f20
-      double precision tap(0:ldegmax),ldf(nsmax,nrmax)
-      double precision f0(nsmax,nrmax)
+      double precision depsarc,anorm
+      double precision f,dt0,df0,rn,re,azi,bazi,bazi0
+      double precision tap(0:ldegmax)
       double complex cp0,cp1,cp2,wavelet
       double complex cfac,ca,cb,dur,dut,dup,dus,dug,duv,duw
       double complex wvf(nfmax,nsmax)
       double complex expl(nsmax),clvd(nsmax),ss12(nsmax)
       double complex ss11(nsmax),ds31(nsmax),ds23(nsmax)
+      logical fullwave
 c
       do ldeg=0,ldegmax
         tap(ldeg)=1.d0
       enddo
 c
+      fullwave=ldegmin.gt.10*(1+ndmax)
+     &        .and.(nlpf.le.0.or.nlpf.gt.0.and.f1corner.le.0.d0)
+c
       do is=1,ns
         depsarc=deps(is)/REARTH
-        rrs=REARTH-deps(is)
-        lys=lyob
-        do ly=lyob+1,min0(lycm-1,ly0)
-          if(rrs.le.rrup(ly))then
-            lys=ly
-          endif
-        enddo
-        if(slwupcut.gt.0.d0)then
-          slws=dmin1(slwupcut,slwmax)*REARTH
-        else
-          slws=slwmax*REARTH
-        endif
+c
         do ir=1,nr
           call disazi(1.d0,lats(is),lons(is),
      &                     latr(ir),lonr(ir),rn,re)
 c
           dis(is,ir)=dsqrt(rn**2+re**2)
-          twin=dble(ntcutout)*dt+tred(ir)-togs(is)
-          if(dis(is,ir).gt.0.d0)then
-            slwr=twin/dis(is,ir)
-          else
-            slwr=slws
-          endif
 c
-          if(slwr.ge.slws.or.slwupcut.le.0.d0)then
-            ldf(is,ir)=0.d0
+c         determine order of differential transform
+c
+          if(fullwave.or.dis(is,ir).le.dmax1(5.d0*depsarc,PI/90.d0))then
             idr(is,ir)=0
           else
-            ldf(is,ir)=PI2*slwr
-            idr(is,ir)=min0(ndmax,
-     &             idnint(dlog(dis(is,ir)/depsarc)/dlog(10.d0)))
+            idr(is,ir)=idnint(dble(ndmax)*(dis(is,ir)-5.d0*depsarc)/PI)
           endif
-c
-c         f0 is the frequency, at which the distance is equal to 10 times
-c         of cut-off wavelength
-c
-          f0(is,ir)=10.d0/(slwr*dsqrt(dis(is,ir)**2+depsarc**2))
 c
           ssd(is,ir)=dcmplx(dsin(dis(is,ir)),0.d0)
           ssf(is,ir)=dcmplx(2.d0*dsin(0.5d0*dis(is,ir))**2,0.d0)
@@ -186,7 +166,6 @@ c
           stop
         endif
 c
-        ldegf0=0
         do lf=1,nfcut
           f=dble(lf-1)*df
           read(21)ldegf
@@ -205,28 +184,27 @@ c
           read(26)((yv(ldeg,istp,0),ldeg=0,ldegf),istp=1,4)
           read(27)((yw(ldeg,istp,0),ldeg=0,ldegf),istp=2,3)
 c
-          if(lf.eq.1)ldegf0=ldegf
           ldegneed=0
-          ldeglw=ldegf
-          ldeg0=ldegf
+          ldeglw=ldegmax
           do is=isg1(ig),isg2(ig)
             do ir=1,nr
-              id=idr(is,ir)
-              if(ldf(is,ir).le.0.d0.or.dis(is,ir).le.0.d0)then
-                ldegtap(4,is,ir)=max0(0,ldegf-id)
+              if(fullwave)then
+                ldegtap(4,is,ir)=max0(0,ldegf-idr(is,ir))
+                ldegtap(3,is,ir)=ldegtap(4,is,ir)*4/5
+                ldegtap(2,is,ir)=0
+                ldegtap(1,is,ir)=0
+                pause
               else
-                ldegtap(4,is,ir)=max0(0,min0(ldegf-id,
-     &             ldegf0+idnint(dsqrt(f**2+f0(is,ir)**2)*ldf(is,ir))))
+                ldegtap(4,is,ir)=idnint(REARTH*PI2*f*slwupcut)
+                ldegtap(3,is,ir)=ldegtap(4,is,ir)*4/5
+                ldegtap(4,is,ir)=min0(ldegf-idr(is,ir),
+     &                                10+ldegtap(4,is,ir))
+                ldegtap(2,is,ir)=min0(ldegtap(3,is,ir),
+     &                                idnint(REARTH*PI2*f*slwlwcut))
+                ldegtap(1,is,ir)=ldegtap(2,is,ir)*4/5
               endif
-              ldegtap(3,is,ir)=max0(0,min0(ldegtap(4,is,ir)*4/5,
-     &                            max0(0,ldegtap(4,is,ir)-40)))
               ldegneed=max0(ldegneed,ldegtap(4,is,ir))
-              ldeglw=min0(ldeglw,ldegtap(4,is,ir))
-              ldegtap(2,is,ir)=min0(ldegtap(3,is,ir),
-     &                              idnint(REARTH*PI2*f*slwlwcut))
-              ldegtap(1,is,ir)=min0(ldegtap(3,is,ir),
-     &                              idnint(0.8d0*REARTH*PI2*f*slwlwcut))
-              ldeg0=min0(ldeg0,ldegtap(1,is,ir))
+              ldeglw=max0(0,min0(ldeglw,ldegtap(1,is,ir)-idr(is,ir)))
             enddo
           enddo
           ldegneed=min0(ldegneed+nd,ldegf)          

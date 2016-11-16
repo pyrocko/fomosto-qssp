@@ -4,7 +4,7 @@
 c
       include 'qpglobal.h'
 c
-      integer i,il,istp,ly,lf,ldeg,ldeg0,ldegf,ldegup,ldegpre
+      integer i,il,istp,ly,lf,ldeg,ldeg0,ldegf,ldegup
       double precision f,ksp2,dll1,omi,expo
       double precision fl,depst1,depst2,dys2,dxs
       double precision kcut1(4),kcut2(4)
@@ -16,9 +16,9 @@ c
       double complex ypsv(6,4),ypsvg(6,4),ysh(2,2)
       double complex ysgr(4),yspr(4),ystt(4),yttt(4)
 c
-      double precision expos,expoa,expof
+      double precision expos
       double complex c2,c3,c4
-      data expos,expoa,expof/12.d0,12.d0,6.d0/
+      data expos/24.d0/
       data c2,c3,c4/(2.d0,0.d0),(3.d0,0.d0),(4.d0,0.d0)/
 c
 c     Initiation
@@ -90,35 +90,19 @@ c
       open(27,file=wgrnfile(ig),
      &     form='unformatted',status='unknown')
 c
-      ldeg0=1+ndmax
-      do ldeg0=1+ndmax,ldegmin
+      ldeg0=10+ndmax
+      do ldeg0=10+ndmax,ldegmin
         dll1=dble(ldeg0)*dble(ldeg0+1)
         expo=0.d0
         do ly=min0(lys,lyr),max0(lys,lyr)-1
           expo=expo+dsqrt(dll1)*dlog(rrup(ly)/rrlw(ly))
         enddo
-        if(expo.gt.expos+dlog(dsqrt(dll1)*fdisk(ldeg0)))goto 10
+        if(expo.gt.expos)goto 10
       enddo
 10    continue
 c
       omi=PI2*fcut
-      ldegup=ldeg0
-      do ldegup=ldeg0,min0(ldegcut+ndmax,ldeg0+idint(REARTH*omi*slwmax))
-        dll1=dble(ldegup)*dble(ldegup+1)
-        expo=0.d0
-        do ly=min0(lys,lyr),max0(lys,lyr)-1
-          if(vsup(ly).gt.0.d0)then
-            ksp2=(omi*rrup(ly)/vsup(ly))**2
-          else
-            ksp2=(omi*rrup(ly)/vpup(ly))**2
-          endif
-          if(dll1.gt.ksp2)then
-            expo=expo+dsqrt(dll1-ksp2)*dlog(rrup(ly)/rrlw(ly))
-          endif
-        enddo
-        if(expo.gt.expof+dlog(dsqrt(dll1)*fdisk(ldegup)))goto 20
-      enddo
-20    continue
+      ldegup=min0(ldegcut+ndmax,ldeg0+idint(REARTH*omi*slwmax))
 c
       if(ldegup.ge.ldegmax-ndmax-1)then
         print *,' Warning in qpgrnspec: cutoff degree = ',ldegup,
@@ -152,29 +136,12 @@ c
         enddo
       enddo
 c
-      ldegpre=ldeg0
       do lf=1,nfcut
         f=dble(lf-1)*df
         omi=PI2*f
         call qpqmodel(f)
 c
-        do ldegf=ldegpre,min0(ldegup,ldeg0+idint(REARTH*omi*slwmax))
-          dll1=dble(ldegf)*dble(ldegf+1)
-          expo=0.d0
-          do ly=min0(lys,lyr),max0(lys,lyr)-1
-            if(vsup(ly).gt.0.d0)then
-              ksp2=(omi*rrup(ly)/vsup(ly))**2
-            else
-              ksp2=(omi*rrup(ly)/vpup(ly))**2
-            endif
-            if(dll1.gt.ksp2)then
-              expo=expo+dsqrt(dll1-ksp2)*dlog(rrup(ly)/rrlw(ly))
-            endif
-          enddo
-          if(expo.gt.expos+dlog(dsqrt(dll1)*fdisk(ldegf)))goto 50
-        enddo
-50      ldegf=min0(ldegf,ldegup)
-        ldegpre=ldegf
+        ldegf=min0(ldegup,ldeg0+idint(REARTH*omi*slwmax))
 c
         do ldeg=0,ldegf+1
           dll1=dble(ldeg)*dble(ldeg+1)
@@ -211,7 +178,7 @@ c
               goto 200
             endif
           enddo
-          do ly=lycm,min0(lycc,ly0)-1
+          do ly=max0(lys,lyr,lycm-1)+1,min0(lycc,ly0)-1
             ksp2=(omi*rrup(ly)/vpup(ly))**2
             if(dll1.gt.ksp2)then
               expo=expo+dsqrt(dll1-ksp2)*dlog(rrup(ly)/rrlw(ly))
@@ -221,7 +188,7 @@ c
               goto 200
             endif
           enddo
-          do ly=lycc,ly0-1
+          do ly=max0(lys,lyr,lycc-1)+1,ly0-1
             ksp2=(omi*rrup(ly)/vsup(ly))**2
             if(dll1.gt.ksp2)then
               expo=expo+dsqrt(dll1-ksp2)*dlog(rrup(ly)/rrlw(ly))
