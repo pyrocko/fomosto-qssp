@@ -38,16 +38,9 @@ c
       fn=ca
       cy=fn
 100   i=i+1
-c
-c      ca=(1.d0,0.d0)/dcmplx(dble((2*(n-i)+1)*i),0.d0)
-c      gn=gn*cxb2*ca
-c      fn=gn+fn*cxa2*ca
-c
-c      corrected by R. Wang on 24.11.2016
-c
-      ca=(1.d0,0.d0)/dcmplx(dble((2*(i-n)+1)*i),0.d0)
-      gn=-gn*cxb2*ca
-      fn=gn-fn*cxa2*ca
+      ca=(1.d0,0.d0)/dcmplx(dble((2*(n-i)+1)*i),0.d0)
+      gn=gn*cxb2*ca
+      fn=gn+fn*cxa2*ca
       cy=cy+fn
       if(cdabs(fn).gt.eps*cdabs(cy))goto 100
       spbdphy=cy
