@@ -1,4 +1,5 @@
 # QSSP (packaged as Fomosto backend)
+[![Build Status](https://travis-ci.org/pyrocko/fomosto-qssp.svg?branch=master)](https://travis-ci.org/pyrocko/fomosto-qssp)
 
 Code for calculating complete synthetic seismograms of a spherical earth using
 normal mode theory.
