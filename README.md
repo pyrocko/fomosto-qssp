@@ -1,32 +1,38 @@
-# QSSP (packaged as Fomosto backend)
-[![Build Status](https://travis-ci.org/pyrocko/fomosto-qssp.svg?branch=master)](https://travis-ci.org/pyrocko/fomosto-qssp)
+# Announcement: The fomosto-qssp repository is leaving GitHub
 
-Code for calculating complete synthetic seismograms of a spherical earth using
-normal mode theory.
+*Potsdam, 2019-08-05*
 
-QSSP has been written by Rongjiang Wang.
+Since last week, [GitHub is restricting access to their services based on
+user nationality and residence](https://help.github.com/en/articles/github-and-trade-controls>) ([see
+also](https://techcrunch.com/2019/07/29/github-ban-sanctioned-countries)).
+Such restrictions are incompatible with scientific standards in
+international research communities like seismology.
 
-Packaging has been done by Sebastian Heimann.
+The fomosto-qssp software package is used by researchers worldwide. As researchers, we are obligated to retain open
+access to all. To achieve this, we are now migrating our code repositories
+away from GitHub to a new safe home. The new home of the fomosto-qssp repository
+is at [git.pyrocko.org](https://git.pyrocko.org/pyrocko/fomosto-qssp/), open now.
 
-## References
+To ensure a smooth
+transition, we will keep a read-only version of the fomosto-qssp repository
+at GitHub until 2019-10-01, when it will be deleted.
 
-- Gilbert, F. and Backus, G.: Elastic-gravitational vibrations of a radially
-  stratified sphere, in: Dynamics of Stratified Solids, edited by: Herrmann,
-  G., American Society of Mechanical Engineers, New York, 82–95, 1968.
-  Takeuchi, H., and M. Saito (1972). Seismic surface waves, in Methods in
-  Computational Physics, vol. 11, Bolt, B. A. , Editor Academic Press, New
-  York, 217- 295. 
-
-- Wang, R., (1997), Tidal response of the solid earth, in Tidal Phenomena,
-  edited by H. Wilhelm, W. Zürn and H.G. Wenzel, Lecture Notes in Earth
-  Sciences, Vol. 66, pp. 27-57, Springer-Verlag, Berlin/Heidelberg, Germany,
-  1997.
-
-## Compile and install
+To update the upstream url of a cloned fomosto-qssp repository, run
 
 ```
-autoreconf -i   # only if 'configure' script is missing
-./configure
-make
-sudo make install
+git remote set-url origin https://git.pyrocko.org/pyrocko/fomosto-qssp.git
 ```
+
+in the cloned directory.
+
+To obtain a fresh clone, run
+
+```
+git clone https://git.pyrocko.org/pyrocko/fomoto-qssp.git fomosto-qssp
+```
+
+Thanks to the worldwide seismology community for all the support and help.
+
+Best regards
+
+*The fomosto-qssp Developers*
